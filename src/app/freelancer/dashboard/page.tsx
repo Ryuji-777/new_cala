@@ -38,6 +38,20 @@ export default function FreelancerDashboard() {
   const [applications, setApplications] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [myServices, setMyServices] = useState<any[]>([]);
+
+  // Services form state
+  const [showPostServiceModal, setShowPostServiceModal] = useState(false);
+  const [serviceTitle, setServiceTitle] = useState("");
+  const [serviceCategory, setServiceCategory] = useState("Programming & Development");
+  const [servicePrice, setServicePrice] = useState("");
+  const [serviceDeliveryDays, setServiceDeliveryDays] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+
+  const [serviceErrors, setServiceErrors] = useState<Record<string, string>>({});
+  const [serviceValidatedFields, setServiceValidatedFields] = useState<Record<string, boolean>>({});
+  const [activeServiceField, setActiveServiceField] = useState<string | null>(null);
+  const [postServiceError, setPostServiceError] = useState<string | null>(null);
   
   // Messaging state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -132,14 +146,14 @@ export default function FreelancerDashboard() {
     // 3. Fetch My Contracts
     const { data: myContracts } = await supabase
       .from("contracts")
-      .select("*, job:jobs(*), client:client_id(*)")
+      .select("*, job:jobs(*), client:client_id(*), service:services(*)")
       .eq("freelancer_id", user.id);
     if (myContracts) setContracts(myContracts);
 
     // 4. Fetch Payments received
     const { data: myPayments } = await supabase
       .from("payments")
-      .select("*, sender:sender_id(*), contract:contracts(job:jobs(*))")
+      .select("*, sender:sender_id(*), contract:contracts(job:jobs(*), service:services(*))")
       .eq("receiver_id", user.id)
       .order("created_at", { ascending: false });
     if (myPayments) setPayments(myPayments);
@@ -163,6 +177,14 @@ export default function FreelancerDashboard() {
       setConversations(Object.values(partners));
     }
 
+    // 6. Fetch My Services
+    const { data: myServs } = await supabase
+      .from("services")
+      .select("*")
+      .eq("freelancer_id", user.id)
+      .order("created_at", { ascending: false });
+    if (myServs) setMyServices(myServs);
+
     setIsLoading(false);
   };
 
@@ -180,6 +202,107 @@ export default function FreelancerDashboard() {
       setApplyFieldError("");
     }
   }, [coverLetter]);
+
+  // Validation for Service Posting Form
+  const validateServiceField = (name: string, value: any): string => {
+    switch (name) {
+      case "serviceTitle":
+        if (!value.trim()) return "Service title is required.";
+        if (value.trim().length < 5) return "Title must be at least 5 characters.";
+        return "";
+      case "servicePrice":
+        if (!value) return "Price is required.";
+        const priceNum = Number(value);
+        if (isNaN(priceNum) || priceNum <= 0) return "Price must be a numeric amount greater than $0.";
+        return "";
+      case "serviceDeliveryDays":
+        if (!value) return "Delivery time is required.";
+        const daysNum = Number(value);
+        if (isNaN(daysNum) || !Number.isInteger(daysNum) || daysNum <= 0) return "Delivery time must be a positive whole number of days.";
+        return "";
+      case "serviceDescription":
+        if (!value) return "Service description is required.";
+        if (value.length < 150) return `Description must be at least 150 characters. (Current: ${value.length}/600)`;
+        if (value.length > 600) return `Description cannot exceed 600 characters. (Current: ${value.length}/600)`;
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  useEffect(() => {
+    const newErrors: Record<string, string> = {};
+    const fields = { serviceTitle, servicePrice, serviceDeliveryDays, serviceDescription };
+    
+    Object.keys(fields).forEach((key) => {
+      const val = fields[key as keyof typeof fields];
+      const errorMsg = validateServiceField(key, val);
+      if (errorMsg) newErrors[key] = errorMsg;
+    });
+
+    setServiceErrors(newErrors);
+  }, [serviceTitle, servicePrice, serviceDeliveryDays, serviceDescription]);
+
+  const getServiceInputClass = (name: string) => {
+    const base = "form-input";
+    if (activeServiceField === name) return base;
+    if (serviceValidatedFields[name]) {
+      return serviceErrors[name] ? `${base} is-invalid` : `${base} is-valid`;
+    }
+    return base;
+  };
+
+  const handleServiceBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setActiveServiceField(null);
+    setServiceValidatedFields((prev) => ({ ...prev, [name]: true }));
+  };
+
+  const handleServiceFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setActiveServiceField(name);
+  };
+
+  const handlePostServiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPostServiceError(null);
+
+    const allValidated = { serviceTitle: true, servicePrice: true, serviceDeliveryDays: true, serviceDescription: true };
+    setServiceValidatedFields(allValidated);
+
+    if (Object.keys(serviceErrors).length > 0) return;
+    if (!profile) return;
+
+    if (!profile.is_verified) {
+      setPostServiceError("You must attach a valid ID and wait for admin approval before you can offer services.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("services")
+      .insert({
+        freelancer_id: profile.id,
+        title: serviceTitle,
+        description: serviceDescription,
+        price: Number(servicePrice),
+        delivery_days: parseInt(serviceDeliveryDays, 10),
+        category: serviceCategory,
+      });
+
+    if (error) {
+      setPostServiceError("Failed to offer service: " + error.message);
+    } else {
+      alert("Service offered successfully!");
+      setServiceTitle("");
+      setServiceDescription("");
+      setServicePrice("");
+      setServiceDeliveryDays("");
+      setServiceCategory("Programming & Development");
+      setServiceValidatedFields({});
+      setShowPostServiceModal(false);
+      loadFreelancerData();
+    }
+  };
 
   // Open Chat Conversation
   const handleOpenChat = async (partner: any) => {
@@ -412,6 +535,12 @@ export default function FreelancerDashboard() {
               Find Work
             </button>
             <button 
+              onClick={() => setActiveTab("my-services")} 
+              style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "my-services" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "my-services" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+            >
+              My Services ({myServices.length})
+            </button>
+            <button 
               onClick={() => setActiveTab("jobs")} 
               style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "jobs" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "jobs" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
             >
@@ -467,7 +596,11 @@ export default function FreelancerDashboard() {
                 {applications.map((app, idx) => (
                   <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", padding: "12px 0", fontSize: "14px" }}>
                     <div>
-                      <strong style={{ color: "var(--primary-color)" }}>{app.job.title}</strong>
+                      <strong>
+                        <Link href={`/jobs/${app.job.id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {app.job.title}
+                        </Link>
+                      </strong>
                       <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                         Client: @{app.job.client.screen_name} &bull; Budget: ${Number(app.job.budget).toFixed(2)}
                       </p>
@@ -517,7 +650,11 @@ export default function FreelancerDashboard() {
                   <div key={idx} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "24px" }}>
                     <div style={{ flex: 1 }}>
                       <span className="tag" style={{ marginBottom: "8px" }}>{job.category}</span>
-                      <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>{job.title}</h3>
+                      <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>
+                        <Link href={`/jobs/${job.id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {job.title}
+                        </Link>
+                      </h3>
                       <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
                         Posted by: @{job.client.screen_name} &bull; Budget: ${Number(job.budget).toFixed(2)} &bull; Date: {new Date(job.created_at).toLocaleDateString()}
                       </p>
@@ -598,6 +735,208 @@ export default function FreelancerDashboard() {
             </div>
           )}
 
+          {/* TAB: MY SERVICES */}
+          {activeTab === "my-services" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>My Posted Services</h3>
+                <button 
+                  onClick={() => setShowPostServiceModal(true)} 
+                  className="btn btn-primary"
+                  style={{ padding: "8px 16px" }}
+                >
+                  Offer a Service
+                </button>
+              </div>
+
+              {/* Services Grid List */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px", marginBottom: "24px" }}>
+                {myServices.map((service, idx) => (
+                  <div key={idx} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", margin: 0 }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                        <span className="tag" style={{ marginBottom: "8px" }}>{service.category}</span>
+                        <span style={{ fontSize: "16px", fontWeight: "800", color: "var(--primary-color)" }}>
+                          ${Number(service.price).toFixed(2)}
+                        </span>
+                      </div>
+                      <h4 style={{ fontSize: "16px", fontWeight: "700", marginTop: "4px" }}>{service.title}</h4>
+                      <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                        Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
+                      </p>
+                      <p style={{ fontSize: "13px", color: "var(--text-primary)", marginTop: "12px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.5" }}>
+                        {service.description}
+                      </p>
+                    </div>
+                    <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+                      <Link href={`/services/${service.id}`} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "12px" }}>
+                        View Details
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {myServices.length === 0 && (
+                <div style={{ textAlign: "center", padding: "48px 0", border: "1px dashed var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fff" }}>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>You haven't offered any services yet.</p>
+                  <button 
+                    onClick={() => setShowPostServiceModal(true)} 
+                    className="btn btn-primary"
+                    style={{ marginTop: "16px", padding: "8px 16px" }}
+                  >
+                    Create Your First Service Offer
+                  </button>
+                </div>
+              )}
+
+              {/* POST SERVICE MODAL */}
+              {showPostServiceModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+                  <div className="card" style={{ width: "100%", maxWidth: "550px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)", maxHeight: "90vh", overflowY: "auto" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "8px" }}>Offer a Service</h3>
+                    <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "20px" }}>Define your service offering. Clients will be able to hire you directly.</p>
+
+                    {postServiceError && (
+                      <div style={{ backgroundColor: "var(--error-bg)", border: "1px solid var(--error-border)", color: "var(--error-color)", padding: "12px", borderRadius: "var(--radius-sm)", fontSize: "14px", marginBottom: "20px" }}>
+                        {postServiceError}
+                      </div>
+                    )}
+
+                    <form onSubmit={handlePostServiceSubmit} noValidate>
+                      {/* Title */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="serviceTitle">Service Title</label>
+                        <input
+                          id="serviceTitle"
+                          name="serviceTitle"
+                          type="text"
+                          className={getServiceInputClass("serviceTitle")}
+                          value={serviceTitle}
+                          onChange={(e) => setServiceTitle(e.target.value)}
+                          onBlur={handleServiceBlur}
+                          onFocus={handleServiceFocus}
+                          placeholder="e.g. Professional Next.js Website Development"
+                          required
+                        />
+                        {serviceValidatedFields.serviceTitle && serviceErrors.serviceTitle && (
+                          <span className="form-error">{serviceErrors.serviceTitle}</span>
+                        )}
+                      </div>
+
+                      {/* Category */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="serviceCategory">Category</label>
+                        <select
+                          id="serviceCategory"
+                          name="serviceCategory"
+                          value={serviceCategory}
+                          onChange={(e) => setServiceCategory(e.target.value)}
+                          style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
+                        >
+                          {categories.map((cat, idx) => (
+                            <option key={idx} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                        {/* Price */}
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="servicePrice">Price ($ USD)</label>
+                          <input
+                            id="servicePrice"
+                            name="servicePrice"
+                            type="number"
+                            min="1"
+                            step="0.01"
+                            className={getServiceInputClass("servicePrice")}
+                            value={servicePrice}
+                            onChange={(e) => setServicePrice(e.target.value)}
+                            onBlur={handleServiceBlur}
+                            onFocus={handleServiceFocus}
+                            placeholder="e.g. 150"
+                            required
+                          />
+                          {serviceValidatedFields.servicePrice && serviceErrors.servicePrice && (
+                            <span className="form-error">{serviceErrors.servicePrice}</span>
+                          )}
+                        </div>
+
+                        {/* Delivery Time */}
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="serviceDeliveryDays">Delivery Time (Days)</label>
+                          <input
+                            id="serviceDeliveryDays"
+                            name="serviceDeliveryDays"
+                            type="number"
+                            min="1"
+                            step="1"
+                            className={getServiceInputClass("serviceDeliveryDays")}
+                            value={serviceDeliveryDays}
+                            onChange={(e) => setServiceDeliveryDays(e.target.value)}
+                            onBlur={handleServiceBlur}
+                            onFocus={handleServiceFocus}
+                            placeholder="e.g. 5"
+                            required
+                          />
+                          {serviceValidatedFields.serviceDeliveryDays && serviceErrors.serviceDeliveryDays && (
+                            <span className="form-error">{serviceErrors.serviceDeliveryDays}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="serviceDescription">Service Description</label>
+                        <div className="textarea-container">
+                          <textarea
+                            id="serviceDescription"
+                            name="serviceDescription"
+                            className={getServiceInputClass("serviceDescription")}
+                            value={serviceDescription}
+                            onChange={(e) => setServiceDescription(e.target.value)}
+                            onBlur={handleServiceBlur}
+                            onFocus={handleServiceFocus}
+                            style={{ minHeight: "150px", width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px" }}
+                            placeholder="Detail exactly what deliverables the client gets, your stack, process, etc. (Min 150, max 600 characters)."
+                            required
+                          />
+                          <span className="textarea-counter">
+                            {serviceDescription.length}/600
+                          </span>
+                        </div>
+                        {serviceValidatedFields.serviceDescription && serviceErrors.serviceDescription && (
+                          <span className="form-error">{serviceErrors.serviceDescription}</span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setShowPostServiceModal(false);
+                            setServiceTitle("");
+                            setServiceDescription("");
+                            setServicePrice("");
+                            setServiceDeliveryDays("");
+                            setServiceCategory("Programming & Development");
+                            setServiceValidatedFields({});
+                            setPostServiceError(null);
+                          }} 
+                          className="btn btn-outline"
+                        >
+                          Cancel
+                        </button>
+                        <button type="submit" className="btn btn-primary">Offer Service</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* TAB 3: MY JOBS (CONTRACTS) */}
           {activeTab === "jobs" && (
             <div>
@@ -605,7 +944,19 @@ export default function FreelancerDashboard() {
               {contracts.map((c, idx) => (
                 <div key={idx} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <h4 style={{ fontSize: "16px", fontWeight: "700" }}>{c.job.title}</h4>
+                    <h4 style={{ fontSize: "16px", fontWeight: "700" }}>
+                      {c.job_id ? (
+                        <Link href={`/jobs/${c.job_id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {c.job?.title}
+                        </Link>
+                      ) : c.service_id ? (
+                        <Link href={`/services/${c.service_id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {c.service?.title || "Direct Service Offering"}
+                        </Link>
+                      ) : (
+                        "Direct Service Hire"
+                      )}
+                    </h4>
                     <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
                       Client: @{c.client.screen_name} &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
                       <span style={{ fontWeight: "700", color: c.status === "completed" ? "var(--success-color)" : c.status === "ongoing" ? "var(--primary-color)" : "var(--error-color)" }}>
@@ -631,7 +982,7 @@ export default function FreelancerDashboard() {
               {reviewContract && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
                   <div className="card" style={{ width: "100%", maxWidth: "500px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Review Client for: {reviewContract.job.title}</h3>
+                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Review Client for: {reviewContract.job?.title || reviewContract.service?.title || "Direct Service Hire"}</h3>
                     
                     <form onSubmit={handleSubmitReview}>
                       <div className="form-group">
@@ -803,7 +1154,7 @@ export default function FreelancerDashboard() {
                     <tbody>
                       {payments.map((p, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
-                          <td style={{ padding: "10px 12px", fontWeight: "600" }}>{p.contract.job.title}</td>
+                          <td style={{ padding: "10px 12px", fontWeight: "600" }}>{p.contract.job?.title || p.contract.service?.title || "Direct Service Hire"}</td>
                           <td style={{ padding: "10px 12px" }}>@{p.sender.screen_name} ({p.sender.first_name} {p.sender.last_name})</td>
                           <td style={{ padding: "10px 12px", color: "var(--success-color)", fontWeight: "700" }}>+${Number(p.amount).toFixed(2)}</td>
                           <td style={{ padding: "10px 12px" }}>{new Date(p.created_at).toLocaleString()}</td>

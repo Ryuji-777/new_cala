@@ -57,6 +57,11 @@ export default function ClientDashboard() {
   const [applications, setApplications] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  
+  // Service Discovery Filters
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState("All");
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
 
   // Messaging state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -156,14 +161,14 @@ export default function ClientDashboard() {
     // 3. Fetch Client's contracts
     const { data: myContracts } = await supabase
       .from("contracts")
-      .select("*, job:jobs(*), freelancer:freelancer_id(*)")
+      .select("*, job:jobs(*), freelancer:freelancer_id(*), service:services(*)")
       .eq("client_id", user.id);
     if (myContracts) setContracts(myContracts);
 
     // 4. Fetch payments made
     const { data: myPayments } = await supabase
       .from("payments")
-      .select("*, receiver:receiver_id(*), contract:contracts(job:jobs(*))")
+      .select("*, receiver:receiver_id(*), contract:contracts(job:jobs(*), service:services(*))")
       .eq("sender_id", user.id)
       .order("created_at", { ascending: false });
     if (myPayments) setPayments(myPayments);
@@ -185,6 +190,14 @@ export default function ClientDashboard() {
       });
       setConversations(Object.values(partners));
     }
+
+    // 6. Fetch Services (posted by other freelancers)
+    const { data: allServs } = await supabase
+      .from("services")
+      .select("*, freelancer:profiles(first_name, last_name, screen_name)")
+      .neq("freelancer_id", user.id)
+      .order("created_at", { ascending: false });
+    if (allServs) setServices(allServs);
 
     setIsLoading(false);
   };
@@ -430,7 +443,8 @@ export default function ClientDashboard() {
   // MARK CONTRACT AS COMPLETED (transfers funds to freelancer, closes contract, opens review modal)
   const handleMarkContractCompleted = async (contract: any) => {
     if (!profile) return;
-    const confirmComplete = window.confirm(`Confirm contract completion for "${contract.job.title}". This will transfer the contract budget of $${Number(contract.budget).toFixed(2)} to @${contract.freelancer.screen_name}.`);
+    const contractTitle = contract.job?.title || contract.service?.title || "Direct Service Hire";
+    const confirmComplete = window.confirm(`Confirm contract completion for "${contractTitle}". This will transfer the contract budget of $${Number(contract.budget).toFixed(2)} to @${contract.freelancer.screen_name}.`);
     if (!confirmComplete) return;
 
     // 1. Load freelancer profile to add funds
@@ -472,17 +486,19 @@ export default function ClientDashboard() {
       .update({ status: "completed", completed_at: new Date().toISOString() })
       .eq("id", contract.id);
 
-    // 5. Update job status
-    await supabase
-      .from("jobs")
-      .update({ status: "completed" })
-      .eq("id", contract.job_id);
+    // 5. Update job status if it exists
+    if (contract.job_id) {
+      await supabase
+        .from("jobs")
+        .update({ status: "completed" })
+        .eq("id", contract.job_id);
+    }
 
     // Notify freelancer about completion
     await supabase.from("notifications").insert({
       user_id: contract.freelancer_id,
       title: "Contract Completed & Paid! 💰",
-      content: `Client @${profile.screen_name} marked the contract for "${contract.job.title}" as completed. $${Number(contract.budget).toFixed(2)} has been transferred to your wallet.`,
+      content: `Client @${profile.screen_name} marked the contract for "${contractTitle}" as completed. $${Number(contract.budget).toFixed(2)} has been transferred to your wallet.`,
     });
 
     alert("Contract completed and freelancer paid! Please leave feedback for them.");
@@ -493,7 +509,8 @@ export default function ClientDashboard() {
   // CANCEL CONTRACT (refunds budget to client)
   const handleCancelContract = async (contract: any) => {
     if (!profile) return;
-    const confirmCancel = window.confirm(`Cancel contract for "${contract.job.title}"? The contract budget of $${Number(contract.budget).toFixed(2)} will be refunded back to your client wallet.`);
+    const contractTitle = contract.job?.title || contract.service?.title || "Direct Service Hire";
+    const confirmCancel = window.confirm(`Cancel contract for "${contractTitle}"? The contract budget of $${Number(contract.budget).toFixed(2)} will be refunded back to your client wallet.`);
     if (!confirmCancel) return;
 
     // 1. Refund client's wallet balance
@@ -514,11 +531,13 @@ export default function ClientDashboard() {
       .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
       .eq("id", contract.id);
 
-    // 3. Reset job status to open
-    await supabase
-      .from("jobs")
-      .update({ status: "cancelled" })
-      .eq("id", contract.job_id);
+    // 3. Reset job status to cancelled if it exists
+    if (contract.job_id) {
+      await supabase
+        .from("jobs")
+        .update({ status: "cancelled" })
+        .eq("id", contract.job_id);
+    }
 
     // Notify freelancer about cancellation
     await supabase.from("notifications").insert({
@@ -669,6 +688,12 @@ export default function ClientDashboard() {
               Manage Postings ({myJobs.filter(j => j.status === "open").length})
             </button>
             <button 
+              onClick={() => setActiveTab("find-services")} 
+              style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "find-services" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "find-services" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+            >
+              Find Services
+            </button>
+            <button 
               onClick={() => setActiveTab("contracts")} 
               style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "contracts" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "contracts" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
             >
@@ -724,7 +749,7 @@ export default function ClientDashboard() {
                 {payments.slice(0, 5).map((pay, idx) => (
                   <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", padding: "12px 0", fontSize: "14px" }}>
                     <div>
-                      <strong>Payment for: {pay.contract.job.title}</strong>
+                      <strong>Payment for: {pay.contract.job?.title || pay.contract.service?.title || "Direct Service Hire"}</strong>
                       <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Freelancer: @{pay.receiver.screen_name}</p>
                     </div>
                     <span style={{ color: "var(--error-color)", fontWeight: "700" }}>
@@ -736,6 +761,93 @@ export default function ClientDashboard() {
                   <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No payment history logged yet.</p>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* TAB: FIND SERVICES */}
+          {activeTab === "find-services" && (
+            <div>
+              {/* FILTERS */}
+              <div style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
+                <select 
+                  value={selectedServiceCategory} 
+                  onChange={(e) => setSelectedServiceCategory(e.target.value)}
+                  style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
+                >
+                  <option value="All">All Categories</option>
+                  {[
+                    "Programming & Development",
+                    "Writing & Translation",
+                    "Design & Art",
+                    "Administrative & Secretarial",
+                    "Sales & Marketing",
+                    "Engineering & Architecture",
+                    "Business & Finance",
+                    "Education & Training",
+                    "Legal"
+                  ].map((c, idx) => (
+                    <option key={idx} value={c}>{c}</option>
+                  ))}
+                </select>
+
+                <input
+                  type="text"
+                  placeholder="Search services by title or description..."
+                  className="form-input"
+                  style={{ maxWidth: "350px" }}
+                  value={serviceSearchQuery}
+                  onChange={(e) => setServiceSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* SERVICES LISTINGS */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+                {services
+                  .filter((service) => {
+                    const matchCat = selectedServiceCategory === "All" || service.category === selectedServiceCategory;
+                    const matchQuery =
+                      service.title.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+                      service.description.toLowerCase().includes(serviceSearchQuery.toLowerCase());
+                    return matchCat && matchQuery;
+                  })
+                  .map((service, idx) => (
+                    <div key={idx} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", margin: 0 }}>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                          <span className="tag" style={{ marginBottom: "8px" }}>{service.category}</span>
+                          <span style={{ fontSize: "16px", fontWeight: "800", color: "var(--primary-color)" }}>
+                            ${Number(service.price).toFixed(2)}
+                          </span>
+                        </div>
+                        <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>{service.title}</h3>
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                          By: @{service.freelancer?.screen_name} ({service.freelancer?.first_name} {service.freelancer?.last_name})
+                        </p>
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                          Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
+                        </p>
+                        <p style={{ fontSize: "13px", color: "#555", marginTop: "12px", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.6" }}>
+                          {service.description}
+                        </p>
+                      </div>
+                      <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+                        <Link href={`/services/${service.id}`} className="btn btn-primary" style={{ padding: "6px 16px", fontSize: "13px" }}>
+                          View Details & Hire
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {services.filter((service) => {
+                const matchCat = selectedServiceCategory === "All" || service.category === selectedServiceCategory;
+                const matchQuery =
+                  service.title.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
+                  service.description.toLowerCase().includes(serviceSearchQuery.toLowerCase());
+                return matchCat && matchQuery;
+              }).length === 0 && (
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "16px" }}>No matching freelancer services found.</p>
+              )}
             </div>
           )}
 
@@ -875,7 +987,11 @@ export default function ClientDashboard() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid var(--border-color)", paddingBottom: "12px" }}>
                       <div>
                         <span className="tag">{job.category}</span>
-                        <h4 style={{ fontSize: "18px", fontWeight: "700", marginTop: "6px" }}>{job.title}</h4>
+                        <h4 style={{ fontSize: "18px", fontWeight: "700", marginTop: "6px" }}>
+                          <Link href={`/jobs/${job.id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                            {job.title}
+                          </Link>
+                        </h4>
                         <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
                           Budget: ${Number(job.budget).toFixed(2)} &bull; Status:{" "}
                           <span style={{ fontWeight: "700", color: job.status === "open" ? "var(--primary-color)" : "var(--text-secondary)" }}>
@@ -939,7 +1055,19 @@ export default function ClientDashboard() {
               {contracts.map((c, idx) => (
                 <div key={idx} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <h4 style={{ fontSize: "16px", fontWeight: "700" }}>{c.job.title}</h4>
+                    <h4 style={{ fontSize: "16px", fontWeight: "700" }}>
+                      {c.job_id ? (
+                        <Link href={`/jobs/${c.job_id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {c.job?.title}
+                        </Link>
+                      ) : c.service_id ? (
+                        <Link href={`/services/${c.service_id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                          {c.service?.title || "Direct Service Offering"}
+                        </Link>
+                      ) : (
+                        "Direct Service Hire"
+                      )}
+                    </h4>
                     <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
                       Freelancer: @{c.freelancer.screen_name} &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
                       <span style={{ fontWeight: "700", color: c.status === "completed" ? "var(--success-color)" : c.status === "ongoing" ? "var(--primary-color)" : "var(--error-color)" }}>
@@ -970,7 +1098,7 @@ export default function ClientDashboard() {
               {reviewContract && (
                 <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
                   <div className="card" style={{ width: "100%", maxWidth: "500px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Review Freelancer for: {reviewContract.job.title}</h3>
+                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Review Freelancer for: {reviewContract.job?.title || reviewContract.service?.title || "Direct Service Hire"}</h3>
                     
                     <form onSubmit={handleSubmitReview}>
                       <div className="form-group">
