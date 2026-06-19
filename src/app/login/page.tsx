@@ -145,14 +145,17 @@ export default function LoginPage() {
           .eq("id", authData.user.id)
           .single();
 
-        if (profileError || !profileData || !profileData.screen_name) {
-          // If profile does not exist or has no screen name, redirect to setup
+        if (profileError || !profileData) {
+          router.push("/profile/setup");
+        } else if (profileData.is_admin || profileData.is_super_admin) {
+          // Admins and Super Admins bypass onboarding
+          router.push("/admin/dashboard");
+        } else if (!profileData.screen_name) {
+          // Regular members must set up profile screen name first
           router.push("/profile/setup");
         } else {
-          // Redirect to appropriate dashboard based on flags (defaulting to freelancer or first available)
-          if (profileData.is_admin || profileData.is_super_admin) {
-            router.push("/admin/dashboard");
-          } else if (profileData.is_freelancer) {
+          // Redirect to appropriate workspace
+          if (profileData.is_freelancer) {
             router.push("/freelancer/dashboard");
           } else {
             router.push("/client/dashboard");

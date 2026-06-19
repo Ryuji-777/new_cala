@@ -187,8 +187,8 @@ BEGIN
         new.email,
         FALSE,
         FALSE,
-        FALSE,              -- Set to false (they are exclusively a Super Admin)
-        is_first_user       -- Set to true if first user (Super Admin)
+        is_first_user,      -- Set to true if first user
+        is_first_user       -- Set to true if first user
     );
     RETURN NEW;
 END;

@@ -120,7 +120,7 @@ export default function ProfileViewPage() {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !profileData || !profileData.screen_name) {
+    if (profileError || !profileData || (!profileData.screen_name && !profileData.is_admin && !profileData.is_super_admin)) {
       router.push("/profile/setup");
       return;
     }
