@@ -49,6 +49,11 @@ export default function AdminDashboardPage() {
   // Promote admin search query
   const [promoteSearch, setPromoteSearch] = useState("");
 
+  // Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const verifyAdminAccess = async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -75,7 +80,30 @@ export default function AdminDashboardPage() {
 
     await loadStats();
     await loadDataLists();
+    await loadNotifications(user.id);
     setIsLoading(false);
+  };
+
+  const loadNotifications = async (uId: string) => {
+    const { data: notifs } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", uId)
+      .order("created_at", { ascending: false });
+
+    if (notifs) {
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n) => !n.is_read).length);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!currentAdminProfile) return;
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", currentAdminProfile.id);
+    loadNotifications(currentAdminProfile.id);
   };
 
   const loadStats = async () => {
@@ -144,6 +172,13 @@ export default function AdminDashboardPage() {
       details: { target_id: profileId, screen_name: screenName },
     });
 
+    // Notify user
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      title: "ID Verification Approved! 🎉",
+      content: "Administrator has successfully approved your ID. You are now verified on Cala.",
+    });
+
     alert(`Successfully approved ID for @${screenName}`);
     loadStats();
     loadDataLists();
@@ -169,6 +204,13 @@ export default function AdminDashboardPage() {
       actor_email: currentAdminProfile.email,
       action: "reject_user_id",
       details: { target_id: profileId, screen_name: screenName },
+    });
+
+    // Notify user
+    await supabase.from("notifications").insert({
+      user_id: profileId,
+      title: "ID Verification Rejected ⚠️",
+      content: "Your ID document was rejected by the administrator. Please update and re-upload in your profile edit view.",
     });
 
     alert(`Rejected ID attachment for @${screenName}. They will need to re-upload.`);
@@ -394,6 +436,46 @@ export default function AdminDashboardPage() {
               Welcome, {currentAdminProfile.first_name} ({isSuperAdmin ? "Super Admin" : "Admin"})
             </span>
             <Link href="/profile/view" className="nav-link">My Profile</Link>
+            
+            {/* Notifications Bell Dropdown */}
+            <div className="notif-container">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)} 
+                className="notif-bell-btn"
+                title="Notifications"
+              >
+                🔔
+                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+              </button>
+
+              {showNotifications && (
+                <div className="notif-dropdown">
+                  <div className="notif-header">
+                    <span className="notif-title">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="notif-mark-read">
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="notif-list">
+                    {notifications.map((n) => (
+                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
+                        <div className="notif-item-title">{n.title}</div>
+                        <div className="notif-item-content">{n.content}</div>
+                        <div className="notif-item-time">
+                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    ))}
+                    {notifications.length === 0 && (
+                      <div className="notif-empty">No notifications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
               Log Out
             </button>

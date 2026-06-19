@@ -25,6 +25,11 @@ export default function FreelancerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
 
+  // Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   // Tabs: "overview", "find-work", "jobs", "messages", "wallet"
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -57,6 +62,28 @@ export default function FreelancerDashboard() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
+  const loadNotifications = async (uId: string) => {
+    const { data: notifs } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", uId)
+      .order("created_at", { ascending: false });
+
+    if (notifs) {
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n) => !n.is_read).length);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!profile) return;
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", profile.id);
+    loadNotifications(profile.id);
+  };
+
   const loadFreelancerData = async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,6 +111,7 @@ export default function FreelancerDashboard() {
     }
 
     setProfile(prof);
+    await loadNotifications(user.id);
 
     // 1. Fetch Open Jobs (posted by other clients)
     const { data: openJobs } = await supabase
@@ -219,6 +247,13 @@ export default function FreelancerDashboard() {
     if (error) {
       setApplyError("Application failed: " + error.message);
     } else {
+      // Insert notification for the client
+      await supabase.from("notifications").insert({
+        user_id: applyJob.client_id,
+        title: "New Job Proposal Received! 📩",
+        content: `@${profile.screen_name} applied to your job posting "${applyJob.title}".`,
+      });
+
       alert("Application submitted successfully!");
       setApplyJob(null);
       setCoverLetter("");
@@ -296,6 +331,46 @@ export default function FreelancerDashboard() {
               Logged in as: {profile.first_name} {profile.last_name}
             </span>
             <Link href="/profile/view" className="nav-link">My Profile</Link>
+
+            {/* Notifications Bell Dropdown */}
+            <div className="notif-container">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)} 
+                className="notif-bell-btn"
+                title="Notifications"
+              >
+                🔔
+                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+              </button>
+
+              {showNotifications && (
+                <div className="notif-dropdown">
+                  <div className="notif-header">
+                    <span className="notif-title">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="notif-mark-read">
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="notif-list">
+                    {notifications.map((n) => (
+                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
+                        <div className="notif-item-title">{n.title}</div>
+                        <div className="notif-item-content">{n.content}</div>
+                        <div className="notif-item-time">
+                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    ))}
+                    {notifications.length === 0 && (
+                      <div className="notif-empty">No notifications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
               Log Out
             </button>

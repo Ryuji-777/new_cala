@@ -44,6 +44,11 @@ export default function ClientDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
 
+  // Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   // Tabs: "overview", "post-job", "manage-jobs", "contracts", "messages", "wallet"
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -77,6 +82,28 @@ export default function ClientDashboard() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
 
+  const loadNotifications = async (uId: string) => {
+    const { data: notifs } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", uId)
+      .order("created_at", { ascending: false });
+
+    if (notifs) {
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n) => !n.is_read).length);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!profile) return;
+    await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", profile.id);
+    loadNotifications(profile.id);
+  };
+
   const loadClientData = async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -103,6 +130,7 @@ export default function ClientDashboard() {
     }
 
     setProfile(prof);
+    await loadNotifications(user.id);
 
     // 1. Fetch Client's posted jobs
     const { data: jobs } = await supabase
@@ -388,6 +416,13 @@ export default function ClientDashboard() {
       content: `Hello! I have hired you for the job "${application.job.title}". The contract budget of $${hireBudget.toFixed(2)} is secured. Let's begin working.`,
     });
 
+    // Notify freelancer about hiring
+    await supabase.from("notifications").insert({
+      user_id: application.freelancer_id,
+      title: "You Have Been Hired! 🎉",
+      content: `Client @${profile.screen_name} hired you for "${application.job.title}". Budget: $${hireBudget.toFixed(2)}.`,
+    });
+
     alert(`Successfully hired @${application.freelancer.screen_name}! Funds are held in contract escrow.`);
     loadClientData();
   };
@@ -443,6 +478,13 @@ export default function ClientDashboard() {
       .update({ status: "completed" })
       .eq("id", contract.job_id);
 
+    // Notify freelancer about completion
+    await supabase.from("notifications").insert({
+      user_id: contract.freelancer_id,
+      title: "Contract Completed & Paid! 💰",
+      content: `Client @${profile.screen_name} marked the contract for "${contract.job.title}" as completed. $${Number(contract.budget).toFixed(2)} has been transferred to your wallet.`,
+    });
+
     alert("Contract completed and freelancer paid! Please leave feedback for them.");
     setReviewContract(contract);
     loadClientData();
@@ -477,6 +519,13 @@ export default function ClientDashboard() {
       .from("jobs")
       .update({ status: "cancelled" })
       .eq("id", contract.job_id);
+
+    // Notify freelancer about cancellation
+    await supabase.from("notifications").insert({
+      user_id: contract.freelancer_id,
+      title: "Contract Cancelled ❌",
+      content: `Client @${profile.screen_name} has cancelled the contract for "${contract.job.title}".`,
+    });
 
     alert("Contract cancelled and funds refunded to your wallet.");
     loadClientData();
@@ -533,6 +582,46 @@ export default function ClientDashboard() {
               Logged in as: {profile.first_name} {profile.last_name}
             </span>
             <Link href="/profile/view" className="nav-link">My Profile</Link>
+
+            {/* Notifications Bell Dropdown */}
+            <div className="notif-container">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)} 
+                className="notif-bell-btn"
+                title="Notifications"
+              >
+                🔔
+                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
+              </button>
+
+              {showNotifications && (
+                <div className="notif-dropdown">
+                  <div className="notif-header">
+                    <span className="notif-title">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={handleMarkAllRead} className="notif-mark-read">
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="notif-list">
+                    {notifications.map((n) => (
+                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
+                        <div className="notif-item-title">{n.title}</div>
+                        <div className="notif-item-content">{n.content}</div>
+                        <div className="notif-item-time">
+                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    ))}
+                    {notifications.length === 0 && (
+                      <div className="notif-empty">No notifications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
               Log Out
             </button>
