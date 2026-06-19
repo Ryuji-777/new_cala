@@ -141,7 +141,7 @@ export default function LoginPage() {
         // Fetch profile to check if setup is completed
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("screen_name, is_freelancer, is_client, is_admin")
+          .select("screen_name, is_freelancer, is_client, is_admin, is_super_admin")
           .eq("id", authData.user.id)
           .single();
 
@@ -150,7 +150,7 @@ export default function LoginPage() {
           router.push("/profile/setup");
         } else {
           // Redirect to appropriate dashboard based on flags (defaulting to freelancer or first available)
-          if (profileData.is_admin) {
+          if (profileData.is_admin || profileData.is_super_admin) {
             router.push("/admin/dashboard");
           } else if (profileData.is_freelancer) {
             router.push("/freelancer/dashboard");

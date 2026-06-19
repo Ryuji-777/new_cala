@@ -438,7 +438,7 @@ export default function ProfileViewPage() {
             Cala
           </Link>
           <nav className="nav-links">
-            {profile.is_admin && (
+            {(profile.is_admin || profile.is_super_admin) && (
               <Link href="/admin/dashboard" className="nav-link">Admin Dashboard</Link>
             )}
             {profile.is_freelancer && (
