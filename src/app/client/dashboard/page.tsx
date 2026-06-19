@@ -156,14 +156,14 @@ export default function ClientDashboard() {
     // 3. Fetch Client's contracts
     const { data: myContracts } = await supabase
       .from("contracts")
-      .select("*, job:jobs(*), freelancer:profiles(*)")
+      .select("*, job:jobs(*), freelancer:freelancer_id(*)")
       .eq("client_id", user.id);
     if (myContracts) setContracts(myContracts);
 
     // 4. Fetch payments made
     const { data: myPayments } = await supabase
       .from("payments")
-      .select("*, receiver:profiles(*), contract:contracts(job:jobs(*))")
+      .select("*, receiver:receiver_id(*), contract:contracts(job:jobs(*))")
       .eq("sender_id", user.id)
       .order("created_at", { ascending: false });
     if (myPayments) setPayments(myPayments);
@@ -171,7 +171,7 @@ export default function ClientDashboard() {
     // 5. Load active chat conversations list
     const { data: msgList } = await supabase
       .from("messages")
-      .select("*, sender:profiles(*), receiver:profiles(*)")
+      .select("*, sender:sender_id(*), receiver:receiver_id(*)")
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order("created_at", { ascending: true });
 

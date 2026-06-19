@@ -132,14 +132,14 @@ export default function FreelancerDashboard() {
     // 3. Fetch My Contracts
     const { data: myContracts } = await supabase
       .from("contracts")
-      .select("*, job:jobs(*), client:profiles(*)")
+      .select("*, job:jobs(*), client:client_id(*)")
       .eq("freelancer_id", user.id);
     if (myContracts) setContracts(myContracts);
 
     // 4. Fetch Payments received
     const { data: myPayments } = await supabase
       .from("payments")
-      .select("*, sender:profiles(*), contract:contracts(job:jobs(*))")
+      .select("*, sender:sender_id(*), contract:contracts(job:jobs(*))")
       .eq("receiver_id", user.id)
       .order("created_at", { ascending: false });
     if (myPayments) setPayments(myPayments);
@@ -147,7 +147,7 @@ export default function FreelancerDashboard() {
     // 5. Load active chat list
     const { data: msgList } = await supabase
       .from("messages")
-      .select("*, sender:profiles(*), receiver:profiles(*)")
+      .select("*, sender:sender_id(*), receiver:receiver_id(*)")
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order("created_at", { ascending: true });
 
