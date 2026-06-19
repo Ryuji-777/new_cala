@@ -201,3 +201,20 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+
+-- ROW LEVEL SECURITY (RLS) CONFIGURATION
+-- For testing convenience in staging, we disable RLS on all tables so the web app can perform reads/writes.
+-- You can run the following block in your Supabase SQL Editor:
+ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.freelancer_skills DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.jobs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.applications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.contracts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.payments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.reviews DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.system_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.archives DISABLE ROW LEVEL SECURITY;
+
