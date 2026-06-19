@@ -323,10 +323,22 @@ export default function ProfileSetupPage() {
         }
       }
 
-      // Update profiles
+      // Get auth user details to pass email/names to upsert
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setSubmitError("User session not found. Please log in again.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Upsert profiles
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+          id: userId,
+          first_name: user.user_metadata?.first_name || "",
+          last_name: user.user_metadata?.last_name || "",
+          email: user.email || "",
           screen_name: screenName,
           description: description,
           city: city,
@@ -337,8 +349,7 @@ export default function ProfileSetupPage() {
           is_freelancer: isFreelancer,
           is_client: isClient,
           is_verified: false, // Wait for admin approval
-        })
-        .eq("id", userId);
+        });
 
       if (updateError) {
         setSubmitError(updateError.message);
