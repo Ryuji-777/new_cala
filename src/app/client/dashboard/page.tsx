@@ -975,17 +975,36 @@ export default function ClientDashboard() {
                     <form onSubmit={handleSubmitReview}>
                       <div className="form-group">
                         <label className="form-label">Rating (1 to 5 Stars)</label>
-                        <select 
-                          value={rating} 
-                          onChange={(e) => setRating(Number(e.target.value))}
-                          style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)" }}
-                        >
-                          <option value={5}>⭐⭐⭐⭐⭐ (5 - Excellent)</option>
-                          <option value={4}>⭐⭐⭐⭐ (4 - Good)</option>
-                          <option value={3}>⭐⭐⭐ (3 - Average)</option>
-                          <option value={2}>⭐⭐ (2 - Poor)</option>
-                          <option value={1}>⭐ (1 - Terrible)</option>
-                        </select>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setRating(star)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  fontSize: "28px",
+                                  cursor: "pointer",
+                                  color: star <= rating ? "#fbbf24" : "#cbd5e1",
+                                  padding: 0,
+                                  margin: 0,
+                                  transition: "color 0.15s ease",
+                                }}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                          <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                            {rating === 5 && "Excellent"}
+                            {rating === 4 && "Good"}
+                            {rating === 3 && "Average"}
+                            {rating === 2 && "Poor"}
+                            {rating === 1 && "Terrible"}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="form-group">
