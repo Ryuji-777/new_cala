@@ -184,12 +184,6 @@ export default function SignupPage() {
             <div className="logo-icon">C</div>
             Cala
           </Link>
-          <nav className="nav-links">
-            <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>Already have an account?</span>
-            <Link href="/login" className="btn btn-blue-outline" style={{ padding: "6px 14px", fontSize: "13px" }}>
-              Log in
-            </Link>
-          </nav>
         </div>
       </header>
 
@@ -336,11 +330,18 @@ export default function SignupPage() {
             <button 
               type="submit" 
               className="btn btn-primary" 
-              style={{ width: "100%", padding: "12px", fontSize: "15px", fontWeight: "700" }}
+              style={{ width: "100%", padding: "12px", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Creating Account..." : "Sign Up"}
             </button>
+
+            <div style={{ textAlign: "center", marginTop: "8px", fontSize: "14px", color: "var(--text-secondary)" }}>
+              Already have an account?{" "}
+              <Link href="/login" style={{ color: "var(--primary-color)", fontWeight: "600" }}>
+                Log in
+              </Link>
+            </div>
 
           </form>
 

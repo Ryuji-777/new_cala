@@ -179,12 +179,6 @@ export default function LoginPage() {
             <div className="logo-icon">C</div>
             Cala
           </Link>
-          <nav className="nav-links">
-            <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>New to Cala?</span>
-            <Link href="/signup" className="btn btn-blue-outline" style={{ padding: "6px 14px", fontSize: "13px" }}>
-              Sign up
-            </Link>
-          </nav>
         </div>
       </header>
 
@@ -269,11 +263,18 @@ export default function LoginPage() {
             <button 
               type="submit" 
               className="btn btn-primary" 
-              style={{ width: "100%", padding: "12px", fontSize: "15px", fontWeight: "700" }}
+              style={{ width: "100%", padding: "12px", fontSize: "15px", fontWeight: "700", marginBottom: "16px" }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Logging in..." : "Log In"}
             </button>
+
+            <div style={{ textAlign: "center", marginTop: "8px", fontSize: "14px", color: "var(--text-secondary)" }}>
+              New to Cala?{" "}
+              <Link href="/signup" style={{ color: "var(--primary-color)", fontWeight: "600" }}>
+                Sign up
+              </Link>
+            </div>
 
           </form>
 
