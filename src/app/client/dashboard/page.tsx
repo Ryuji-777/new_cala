@@ -86,6 +86,8 @@ export default function ClientDashboard() {
   const [reviewContract, setReviewContract] = useState<any>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [reviewedContractIds, setReviewedContractIds] = useState<Set<string>>(new Set());
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const loadNotifications = async (uId: string) => {
     const { data: notifs } = await supabase
@@ -198,6 +200,15 @@ export default function ClientDashboard() {
       .neq("freelancer_id", user.id)
       .order("created_at", { ascending: false });
     if (allServs) setServices(allServs);
+
+    // 7. Fetch reviews submitted by me
+    const { data: mySubmittedReviews } = await supabase
+      .from("reviews")
+      .select("contract_id")
+      .eq("reviewer_id", user.id);
+    if (mySubmittedReviews) {
+      setReviewedContractIds(new Set(mySubmittedReviews.map((r) => r.contract_id)));
+    }
 
     setIsLoading(false);
   };
@@ -553,7 +564,16 @@ export default function ClientDashboard() {
   // Submit Freelancer Review Handler
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !reviewContract || !comment.trim()) return;
+    if (!profile || !reviewContract || !comment.trim() || isSubmittingReview) return;
+
+    if (reviewedContractIds.has(reviewContract.id)) {
+      alert("You have already submitted a review for this contract.");
+      setReviewContract(null);
+      setComment("");
+      return;
+    }
+
+    setIsSubmittingReview(true);
 
     const { error } = await supabase.from("reviews").insert({
       contract_id: reviewContract.id,
@@ -563,10 +583,27 @@ export default function ClientDashboard() {
       comment: comment.trim(),
     });
 
+    setIsSubmittingReview(false);
+
     if (error) {
-      alert("Failed to submit review: " + error.message);
+      if (error.message.includes("unique_contract_reviewer")) {
+        alert("You have already submitted a review for this contract.");
+        // Sync set locally
+        setReviewedContractIds(prev => {
+          const next = new Set(prev);
+          next.add(reviewContract.id);
+          return next;
+        });
+      } else {
+        alert("Failed to submit review: " + error.message);
+      }
     } else {
       alert("Review submitted successfully! Thank you.");
+      setReviewedContractIds(prev => {
+        const next = new Set(prev);
+        next.add(reviewContract.id);
+        return next;
+      });
       setReviewContract(null);
       setComment("");
       loadClientData();
@@ -1087,6 +1124,17 @@ export default function ClientDashboard() {
                         </button>
                       </>
                     )}
+                    {c.status === "completed" && (
+                      reviewedContractIds.has(c.id) ? (
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: "600", backgroundColor: "#f1f5f9", padding: "6px 10px", borderRadius: "var(--radius-sm)" }}>
+                          Reviewed ✓
+                        </span>
+                      ) : (
+                        <button onClick={() => setReviewContract(c)} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
+                          Review Freelancer
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
               ))}
@@ -1148,7 +1196,9 @@ export default function ClientDashboard() {
 
                       <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
                         <button type="button" onClick={() => setReviewContract(null)} className="btn btn-outline">Cancel</button>
-                        <button type="submit" className="btn btn-primary">Submit Review</button>
+                        <button type="submit" disabled={isSubmittingReview} className="btn btn-primary">
+                          {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                        </button>
                       </div>
                     </form>
                   </div>
