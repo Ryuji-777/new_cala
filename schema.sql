@@ -77,11 +77,31 @@ CREATE TABLE IF NOT EXISTS public.applications (
     CONSTRAINT unique_job_freelancer UNIQUE (job_id, freelancer_id)
 );
 
+-- SERVICES TABLE
+-- Posted by freelancers to sell their services directly
+CREATE TABLE IF NOT EXISTS public.services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    price NUMERIC(10, 2) NOT NULL CHECK (price > 0),
+    delivery_days INTEGER NOT NULL CHECK (delivery_days > 0),
+    category TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT service_description_limit CHECK (
+        LENGTH(description) >= 150 AND LENGTH(description) <= 600
+    )
+);
+
 -- CONTRACTS TABLE
--- Created when a client hires a freelancer for a job
+-- Created when a client hires a freelancer for a job or directly for a service
 CREATE TABLE IF NOT EXISTS public.contracts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
+    job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE, -- Nullable if hired directly from a service
+    service_id UUID REFERENCES public.services(id) ON DELETE CASCADE, -- Nullable if hired from a job post
     freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     client_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
     budget NUMERIC(10, 2) NOT NULL CHECK (budget > 0),
@@ -208,6 +228,7 @@ CREATE TRIGGER on_auth_user_created
 -- You can run the following block in your Supabase SQL Editor:
 ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.freelancer_skills DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.services DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.jobs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.applications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.contracts DISABLE ROW LEVEL SECURITY;
