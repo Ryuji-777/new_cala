@@ -9,21 +9,18 @@ interface PopupProps {
 }
 
 export default function Popup({ message, type = "info", onClose }: PopupProps) {
-  // Determine icon, theme colors and gradient matching the premium aesthetic
+  // Determine icon, theme colors and border matching the premium aesthetic
   let icon = "ℹ️";
   let themeColor = "var(--primary-color)";
-  let bgGradient = "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)";
   let borderStyle = "1px solid #bfdbfe";
 
   if (type === "success") {
     icon = "✅";
     themeColor = "var(--success-color)";
-    bgGradient = "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)";
     borderStyle = "1px solid #bbf7d0";
   } else if (type === "error") {
     icon = "⚠️";
     themeColor = "var(--error-color)";
-    bgGradient = "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)";
     borderStyle = "1px solid #fca5a5";
   }
 
@@ -47,7 +44,7 @@ export default function Popup({ message, type = "info", onClose }: PopupProps) {
     >
       <div
         style={{
-          background: bgGradient,
+          background: "#ffffff",
           border: borderStyle,
           borderRadius: "12px",
           boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
@@ -60,19 +57,6 @@ export default function Popup({ message, type = "info", onClose }: PopupProps) {
           overflow: "hidden",
         }}
       >
-        {/* Subtle decorative glow */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-50%",
-            left: "-50%",
-            width: "200%",
-            height: "200%",
-            background: `radial-gradient(circle at center, rgba(255,255,255,0.7) 0%, transparent 60%)`,
-            pointerEvents: "none",
-            opacity: 0.5,
-          }}
-        />
 
         {/* Icon with scaling bounce animation */}
         <div
