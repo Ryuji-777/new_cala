@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cala Super Admin - Admin Management Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #cbd5e1;
+      
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: #e0e7ff;
+      
+      --success-color: #10b981;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+
+      --error-color: #ef4444;
+      --error-bg: #fef2f2;
+      --error-border: #fca5a5;
+
+      --font-sans: 'Inter', -apple-system, sans-serif;
+      --font-title: 'Plus Jakarta Sans', sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.03);
+    }
+
+    /* Figma Prototype Canvas Overrides */
+    body.figma-dark-canvas {
+      --bg-main: #121214;
+      --bg-card: #1a1a1e;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --primary-light: #312e81;
+    }
+
+    body.figma-show-outlines * {
+      outline: 1px dashed rgba(99, 102, 241, 0.45) !important;
+    }
+    body.figma-show-outlines *:hover {
+      outline: 1px dashed rgba(99, 102, 241, 1) !important;
+    }
+
+    /* Layout Grid Overlay */
+    .figma-grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 50px,
+        rgba(239, 68, 68, 0.02) 50px,
+        rgba(239, 68, 68, 0.02) 100px
+      );
+    }
+    body.figma-show-grid .figma-grid-overlay {
+      display: block;
+    }
+
+    /* Figma Toolbar Widget */
+    .figma-toolbar {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10000;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .figma-toolbar-title {
+      font-family: var(--font-title);
+      font-weight: 800;
+      color: #818cf8;
+      border-right: 1px solid rgba(255,255,255,0.2);
+      padding-right: 12px;
+    }
+    .figma-toolbar-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .figma-toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .figma-toolbar-btn.active {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      height: 70px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .logo {
+      font-family: var(--font-title);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 20px;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-link {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--primary-color);
+      background-color: var(--primary-light);
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border-color);
+      padding-left: 20px;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .title-section {
+      margin-bottom: 32px;
+    }
+
+    .title {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .panel {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-family: var(--font-title);
+      font-weight: 800;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+
+    .user-name-info {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .user-handle {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 50px;
+      text-transform: uppercase;
+    }
+
+    .role-badge.user {
+      background-color: var(--primary-light);
+      color: var(--primary-color);
+    }
+
+    .role-badge.admin {
+      background-color: #fef3c7;
+      color: #d97706;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+
+    /* Modal Form Overlay */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .popup-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .popup-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      transform: scale(0.92);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .popup-overlay.active .popup-card {
+      transform: scale(1);
+    }
+
+    .popup-title {
+      font-family: var(--font-title);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+
+    .popup-msg {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    .popup-btn {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border: none;
+      padding: 10px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .popup-btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    footer {
+      background-color: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 24px 0;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: auto;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Layout Grid Overlay -->
+  <div class="figma-grid-overlay"></div>
+
+  <!-- Navigation Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo">
+        <div class="logo-icon">C</div>
+        Cala
+      </div>
+      <nav class="nav-links">
+        <a href="admin_management.html" class="nav-link active">Admin Management</a>
+        <a href="audit_logs.html" class="nav-link">Audit Logs</a>
+        <a href="archives.html" class="nav-link">Archived Records</a>
+      </nav>
+      <div class="user-badge">
+        Super Admin Portal
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="title-section">
+      <h2 class="title">Administrative Role Controls</h2>
+    </div>
+
+    <div class="panel">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>User Account</th>
+              <th>Platform Email</th>
+              <th>System Role</th>
+              <th>Promotion Date</th>
+              <th>Access Actions</th>
+            </tr>
+          </thead>
+          <tbody id="management-tbody">
+            <!-- Row 1 -->
+            <tr id="mgmt-row-1">
+              <td>
+                <span class="user-name-info">Alice Miller</span>
+                <span class="user-handle">@alice_m</span>
+              </td>
+              <td>alice.miller@example.com</td>
+              <td><span class="role-badge user" id="role-badge-1">Freelancer</span></td>
+              <td id="date-1">--</td>
+              <td>
+                <div id="actions-1">
+                  <button class="btn btn-primary" onclick="confirmPromotePopup(1, 'Alice Miller')">Promote to Admin</button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr id="mgmt-row-2">
+              <td>
+                <span class="user-name-info">Bob Builder</span>
+                <span class="user-handle">@bob_b</span>
+              </td>
+              <td>bob.builder@example.com</td>
+              <td><span class="role-badge user" id="role-badge-2">Client</span></td>
+              <td id="date-2">--</td>
+              <td>
+                <div id="actions-2">
+                  <button class="btn btn-primary" onclick="confirmPromotePopup(2, 'Bob Builder')">Promote to Admin</button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr id="mgmt-row-3">
+              <td>
+                <span class="user-name-info">Jane Admin</span>
+                <span class="user-handle">@jane_admin</span>
+              </td>
+              <td>jane.admin@cala.com</td>
+              <td><span class="role-badge admin" id="role-badge-3">Admin</span></td>
+              <td id="date-3">June 10, 2026</td>
+              <td>
+                <div id="actions-3">
+                  <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" onclick="confirmDemotePopup(3, 'Jane Admin')">Demote to User</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Interactive Promote/Demote Confirmation Popup - NO EMOJIS (Replacing window.confirm) -->
+  <div class="popup-overlay" id="confirm-popup-modal">
+    <div class="popup-card">
+      <h4 class="popup-title" id="confirm-title-elm">Confirm Role Authority</h4>
+      <p class="popup-msg" id="confirm-msg-elm">Are you sure you want to alter this user's role access?</p>
+      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
+        <button class="btn btn-outline" onclick="closeConfirmPopup()">Cancel</button>
+        <button class="btn btn-primary" id="confirm-action-btn" onclick="executeRoleAction()">Confirm Action</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typographic Success Notification Popup - NO EMOJIS -->
+  <div class="popup-overlay" id="popup-modal">
+    <div class="popup-card" id="popup-card-theme">
+      <h4 class="popup-title" id="popup-title-elm">Success</h4>
+      <p class="popup-msg" id="popup-msg-elm">Role permission updated successfully.</p>
+      <button class="popup-btn" onclick="closeSuccessPopup()">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Figma Floating Toolbar Widget -->
+  <div class="figma-toolbar">
+    <span class="figma-toolbar-title">Figma Prototype</span>
+    <button class="figma-toolbar-btn" id="btn-figma-grid" onclick="toggleFigmaGrid()">Grid</button>
+    <button class="figma-toolbar-btn" id="btn-figma-outlines" onclick="toggleFigmaOutlines()">Outlines</button>
+    <button class="figma-toolbar-btn" id="btn-figma-theme" onclick="toggleFigmaTheme()">Dark Canvas</button>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Cala Freelance Marketplace. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    let activeAction = null; // Stores role data
+
+    function confirmPromotePopup(id, name) {
+      activeAction = { type: 'promote', id, name };
+      document.getElementById('confirm-title-elm').textContent = 'Promote User to Admin';
+      document.getElementById('confirm-msg-elm').textContent = `Authorize administrative access for user ${name}? This grants credentials to verify IDs and manage users.`;
+      document.getElementById('confirm-popup-modal').classList.add('active');
+    }
+
+    function confirmDemotePopup(id, name) {
+      activeAction = { type: 'demote', id, name };
+      document.getElementById('confirm-title-elm').textContent = 'Demote Administrator';
+      document.getElementById('confirm-msg-elm').textContent = `Revoke administrative credentials for user ${name}? This will return their account profile to standard access status.`;
+      document.getElementById('confirm-popup-modal').classList.add('active');
+    }
+
+    function closeConfirmPopup() {
+      document.getElementById('confirm-popup-modal').classList.remove('active');
+      activeAction = null;
+    }
+
+    function executeRoleAction() {
+      if (!activeAction) return;
+      const { type, id, name } = activeAction;
+
+      const badge = document.getElementById(`role-badge-${id}`);
+      const actions = document.getElementById(`actions-${id}`);
+      const dateCell = document.getElementById(`date-${id}`);
+
+      if (type === 'promote') {
+        // Change role to Admin
+        badge.textContent = 'Admin';
+        badge.className = 'role-badge admin';
+        
+        const dStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        dateCell.textContent = dStr;
+
+        actions.innerHTML = `
+          <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" onclick="confirmDemotePopup(${id}, '${name}')">Demote to User</button>
+        `;
+
+        closeConfirmPopup();
+        showSuccessPopup('Promotion Complete', `${name} has been promoted to Administrator. Access granted.`, true);
+      } else if (type === 'demote') {
+        // Change role to standard User
+        badge.textContent = 'Client';
+        badge.className = 'role-badge user';
+        dateCell.textContent = '--';
+
+        actions.innerHTML = `
+          <button class="btn btn-primary" onclick="confirmPromotePopup(${id}, '${name}')">Promote to Admin</button>
+        `;
+
+        closeConfirmPopup();
+        showSuccessPopup('Demotion Complete', `${name} administrative permissions have been revoked.`, true);
+      }
+    }
+
+    function showSuccessPopup(title, message, isSuccess) {
+      const modal = document.getElementById('popup-modal');
+      const titleElm = document.getElementById('popup-title-elm');
+      const msgElm = document.getElementById('popup-msg-elm');
+      const card = document.getElementById('popup-card-theme');
+
+      titleElm.textContent = title;
+      msgElm.textContent = message;
+
+      if (isSuccess) {
+        card.style.borderColor = 'var(--success-color)';
+      } else {
+        card.style.borderColor = 'var(--error-color)';
+      }
+      
+      modal.classList.add('active');
+    }
+
+    function closeSuccessPopup() {
+      document.getElementById('popup-modal').classList.remove('active');
+    }
+
+    // Figma Tooling Functions
+    function toggleFigmaGrid() {
+      document.body.classList.toggle('figma-show-grid');
+      document.getElementById('btn-figma-grid').classList.toggle('active');
+    }
+
+    function toggleFigmaOutlines() {
+      document.body.classList.toggle('figma-show-outlines');
+      document.getElementById('btn-figma-outlines').classList.toggle('active');
+    }
+
+    function toggleFigmaTheme() {
+      document.body.classList.toggle('figma-dark-canvas');
+      const btn = document.getElementById('btn-figma-theme');
+      btn.classList.toggle('active');
+      if (document.body.classList.contains('figma-dark-canvas')) {
+        btn.textContent = 'Light Canvas';
+      } else {
+        btn.textContent = 'Dark Canvas';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cala Admin - User Directory Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #cbd5e1;
+      
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: #e0e7ff;
+      
+      --success-color: #10b981;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+
+      --error-color: #ef4444;
+      --error-bg: #fef2f2;
+      --error-border: #fca5a5;
+
+      --font-sans: 'Inter', -apple-system, sans-serif;
+      --font-title: 'Plus Jakarta Sans', sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.03);
+    }
+
+    /* Figma Prototype Canvas Overrides */
+    body.figma-dark-canvas {
+      --bg-main: #121214;
+      --bg-card: #1a1a1e;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --primary-light: #312e81;
+    }
+
+    body.figma-show-outlines * {
+      outline: 1px dashed rgba(99, 102, 241, 0.45) !important;
+    }
+    body.figma-show-outlines *:hover {
+      outline: 1px dashed rgba(99, 102, 241, 1) !important;
+    }
+
+    /* Layout Grid Overlay */
+    .figma-grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 50px,
+        rgba(239, 68, 68, 0.02) 50px,
+        rgba(239, 68, 68, 0.02) 100px
+      );
+    }
+    body.figma-show-grid .figma-grid-overlay {
+      display: block;
+    }
+
+    /* Figma Toolbar Widget */
+    .figma-toolbar {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10000;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .figma-toolbar-title {
+      font-family: var(--font-title);
+      font-weight: 800;
+      color: #818cf8;
+      border-right: 1px solid rgba(255,255,255,0.2);
+      padding-right: 12px;
+    }
+    .figma-toolbar-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .figma-toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .figma-toolbar-btn.active {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      height: 70px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .logo {
+      font-family: var(--font-title);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 20px;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-link {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--primary-color);
+      background-color: var(--primary-light);
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border-color);
+      padding-left: 20px;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .title-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .title {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .panel {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .filter-select, .filter-input {
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .filter-select {
+      width: 180px;
+    }
+
+    .filter-input {
+      flex: 1;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-family: var(--font-title);
+      font-weight: 800;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+
+    .user-name-info {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .user-handle {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 50px;
+      text-transform: uppercase;
+    }
+
+    .status-badge.active {
+      background-color: var(--success-bg);
+      color: var(--success-color);
+    }
+
+    .status-badge.suspended {
+      background-color: var(--error-bg);
+      color: var(--error-color);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-outline {
+      background-color: transparent;
+      border-color: var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+    }
+
+    /* Modal Form Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 32px;
+      border-radius: var(--radius-md);
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary-color);
+    }
+
+    .form-input.is-valid {
+      border-color: var(--success-color) !important;
+      box-shadow: 0 0 0 1px var(--success-color);
+    }
+
+    .form-input.is-invalid {
+      border-color: var(--error-color) !important;
+      box-shadow: 0 0 0 1px var(--error-color);
+    }
+
+    .form-error {
+      font-size: 12px;
+      color: var(--error-color);
+      margin-top: 6px;
+      font-weight: 500;
+      display: none;
+    }
+
+    .form-error.active {
+      display: block;
+    }
+
+    /* Popup Modal Styles - NO EMOJIS */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .popup-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .popup-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      transform: scale(0.92);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .popup-overlay.active .popup-card {
+      transform: scale(1);
+    }
+
+    .popup-title {
+      font-family: var(--font-title);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+
+    .popup-msg {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    .popup-btn {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border: none;
+      padding: 10px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .popup-btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    footer {
+      background-color: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 24px 0;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: auto;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Layout Grid Overlay -->
+  <div class="figma-grid-overlay"></div>
+
+  <!-- Navigation Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo">
+        <div class="logo-icon">C</div>
+        Cala
+      </div>
+      <nav class="nav-links">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="approvals.html" class="nav-link">ID Approvals</a>
+        <a href="users.html" class="nav-link active">User Directory</a>
+      </nav>
+      <div class="user-badge">
+        Admin Portal
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="title-section">
+      <h2 class="title">User Directory</h2>
+      <button class="btn btn-primary" onclick="openAddUserModal()">+ Add User Account</button>
+    </div>
+
+    <div class="panel">
+      <!-- Search & Filters -->
+      <div class="filter-bar">
+        <input 
+          type="text" 
+          class="filter-input" 
+          id="user-search-input" 
+          placeholder="Search profiles by name or username handle..."
+          oninput="filterUsersTable()"
+        >
+        <select class="filter-select" id="role-select" onchange="filterUsersTable()">
+          <option value="All">All Roles</option>
+          <option value="Admin">Admin</option>
+          <option value="Client">Client</option>
+          <option value="Freelancer">Freelancer</option>
+        </select>
+      </div>
+
+      <!-- Users Table Database -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>User Name</th>
+              <th>Email Address</th>
+              <th>Platform Role</th>
+              <th>Current Status</th>
+              <th>Directory Actions</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-tbody">
+            <!-- Row 1 -->
+            <tr id="user-row-1" data-role="Freelancer">
+              <td>
+                <span class="user-name-info">Alice Miller</span>
+                <span class="user-handle">@alice_m</span>
+              </td>
+              <td>alice.miller@example.com</td>
+              <td>Freelancer</td>
+              <td><span class="status-badge active" id="status-badge-1">Active</span></td>
+              <td>
+                <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" id="btn-toggle-1" onclick="toggleUserSuspension(1, 'Alice Miller')">Suspend</button>
+              </td>
+            </tr>
+
+            <!-- Row 2 -->
+            <tr id="user-row-2" data-role="Client">
+              <td>
+                <span class="user-name-info">Bob Builder</span>
+                <span class="user-handle">@bob_b</span>
+              </td>
+              <td>bob.builder@example.com</td>
+              <td>Client</td>
+              <td><span class="status-badge active" id="status-badge-2">Active</span></td>
+              <td>
+                <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" id="btn-toggle-2" onclick="toggleUserSuspension(2, 'Bob Builder')">Suspend</button>
+              </td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr id="user-row-3" data-role="Admin">
+              <td>
+                <span class="user-name-info">Jane Admin</span>
+                <span class="user-handle">@jane_admin</span>
+              </td>
+              <td>jane.admin@cala.com</td>
+              <td>Admin</td>
+              <td><span class="status-badge active" id="status-badge-3">Active</span></td>
+              <td>
+                <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" id="btn-toggle-3" onclick="toggleUserSuspension(3, 'Jane Admin')">Suspend</button>
+              </td>
+            </tr>
+
+            <!-- Row 4 -->
+            <tr id="user-row-4" data-role="Freelancer">
+              <td>
+                <span class="user-name-info">Suspended Account</span>
+                <span class="user-handle">@spammer</span>
+              </td>
+              <td>junk@spammer.org</td>
+              <td>Freelancer</td>
+              <td><span class="status-badge suspended" id="status-badge-4">Suspended</span></td>
+              <td>
+                <button class="btn btn-outline" style="color: var(--success-color); border-color: var(--success-border);" id="btn-toggle-4" onclick="toggleUserSuspension(4, 'Suspended Account')">Activate</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add User Account Modal -->
+  <div class="modal-overlay" id="add-user-modal">
+    <div class="modal-card">
+      <h3 style="font-family: var(--font-title); font-size: 18px; font-weight: 800; margin-bottom: 16px;">Add Platform User</h3>
+      
+      <form id="add-user-form" onsubmit="handleAddUserSubmit(event)" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="addFullName">Full Name</label>
+          <input 
+            type="text" 
+            id="addFullName" 
+            class="form-input" 
+            placeholder="e.g. John Doe"
+            onblur="validateField('addFullName')"
+            onfocus="focusField('addFullName')"
+            required
+          >
+          <span class="form-error" id="error-addFullName">Full name is required.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="addUserHandle">Username Handle</label>
+          <input 
+            type="text" 
+            id="addUserHandle" 
+            class="form-input" 
+            placeholder="e.g. john_dev (no @ symbol)"
+            onblur="validateField('addUserHandle')"
+            onfocus="focusField('addUserHandle')"
+            required
+          >
+          <span class="form-error" id="error-addUserHandle">Username must be at least 3 characters.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="addEmail">Email Address</label>
+          <input 
+            type="email" 
+            id="addEmail" 
+            class="form-input" 
+            placeholder="e.g. john@example.com"
+            onblur="validateField('addEmail')"
+            onfocus="focusField('addEmail')"
+            required
+          >
+          <span class="form-error" id="error-addEmail">Please enter a valid email address.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="addRole">Default Account Role</label>
+          <select id="addRole" class="form-input">
+            <option value="Freelancer">Freelancer</option>
+            <option value="Client">Client</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px;">
+          <button type="button" class="btn btn-outline" onclick="closeAddUserModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create User Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Typographic Success Notification Popup - NO EMOJIS -->
+  <div class="popup-overlay" id="popup-modal">
+    <div class="popup-card" id="popup-card-theme">
+      <h4 class="popup-title" id="popup-title-elm">Success</h4>
+      <p class="popup-msg" id="popup-msg-elm">Action performed successfully.</p>
+      <button class="popup-btn" onclick="closeSuccessPopup()">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Figma Floating Toolbar Widget -->
+  <div class="figma-toolbar">
+    <span class="figma-toolbar-title">Figma Prototype</span>
+    <button class="figma-toolbar-btn" id="btn-figma-grid" onclick="toggleFigmaGrid()">Grid</button>
+    <button class="figma-toolbar-btn" id="btn-figma-outlines" onclick="toggleFigmaOutlines()">Outlines</button>
+    <button class="figma-toolbar-btn" id="btn-figma-theme" onclick="toggleFigmaTheme()">Dark Canvas</button>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Cala Freelance Marketplace. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    let userCount = 4;
+
+    function openAddUserModal() {
+      document.getElementById('add-user-modal').classList.add('active');
+    }
+
+    function closeAddUserModal() {
+      document.getElementById('add-user-modal').classList.remove('active');
+      document.getElementById('add-user-form').reset();
+      
+      document.getElementById('addFullName').classList.remove('is-valid', 'is-invalid');
+      document.getElementById('addUserHandle').classList.remove('is-valid', 'is-invalid');
+      document.getElementById('addEmail').classList.remove('is-valid', 'is-invalid');
+
+      document.getElementById('error-addFullName').classList.remove('active');
+      document.getElementById('error-addUserHandle').classList.remove('active');
+      document.getElementById('error-addEmail').classList.remove('active');
+    }
+
+    function focusField(fieldName) {
+      const field = document.getElementById(fieldName);
+      field.classList.remove('is-valid', 'is-invalid');
+      document.getElementById(`error-${fieldName}`).classList.remove('active');
+    }
+
+    function validateField(fieldName) {
+      const field = document.getElementById(fieldName);
+      const errorMsg = document.getElementById(`error-${fieldName}`);
+      const val = field.value.trim();
+      let isValid = true;
+
+      if (fieldName === 'addFullName') {
+        isValid = val.length > 0;
+      } else if (fieldName === 'addUserHandle') {
+        isValid = val.length >= 3 && !val.includes('@');
+      } else if (fieldName === 'addEmail') {
+        isValid = val.includes('@') && val.includes('.');
+      }
+
+      if (isValid) {
+        field.classList.add('is-valid');
+        field.classList.remove('is-invalid');
+        errorMsg.classList.remove('active');
+      } else {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        errorMsg.classList.add('active');
+      }
+      return isValid;
+    }
+
+    function handleAddUserSubmit(e) {
+      e.preventDefault();
+
+      const nameValid = validateField('addFullName');
+      const handleValid = validateField('addUserHandle');
+      const emailValid = validateField('addEmail');
+
+      if (nameValid && handleValid && emailValid) {
+        userCount++;
+        const name = document.getElementById('addFullName').value;
+        const handle = document.getElementById('addUserHandle').value;
+        const email = document.getElementById('addEmail').value;
+        const role = document.getElementById('addRole').value;
+
+        const tbody = document.getElementById('user-table-tbody');
+        const tr = document.createElement('tr');
+        tr.id = `user-row-${userCount}`;
+        tr.setAttribute('data-role', role);
+
+        tr.innerHTML = `
+          <td>
+            <span class="user-name-info">${name}</span>
+            <span class="user-handle">@${handle}</span>
+          </td>
+          <td>${email}</td>
+          <td>${role}</td>
+          <td><span class="status-badge active" id="status-badge-${userCount}">Active</span></td>
+          <td>
+            <button class="btn btn-outline" style="color: var(--error-color); border-color: var(--error-border);" id="btn-toggle-${userCount}" onclick="toggleUserSuspension(${userCount}, '${name}')">Suspend</button>
+          </td>
+        `;
+        tbody.insertBefore(tr, tbody.firstChild);
+
+        closeAddUserModal();
+        showSuccessPopup('User Created', `Platform account for ${name} (@${handle}) has been successfully created.`, true);
+      }
+    }
+
+    function toggleUserSuspension(id, name) {
+      const badge = document.getElementById(`status-badge-${id}`);
+      const btn = document.getElementById(`btn-toggle-${id}`);
+      const isSuspended = badge.classList.contains('suspended');
+
+      if (isSuspended) {
+        // Activate user
+        badge.textContent = 'Active';
+        badge.className = 'status-badge active';
+        btn.textContent = 'Suspend';
+        btn.style.color = 'var(--error-color)';
+        btn.style.borderColor = 'var(--error-border)';
+        showSuccessPopup('Account Activated', `Account directory access for user ${name} has been set to Active.`, true);
+      } else {
+        // Suspend user
+        badge.textContent = 'Suspended';
+        badge.className = 'status-badge suspended';
+        btn.textContent = 'Activate';
+        btn.style.color = 'var(--success-color)';
+        btn.style.borderColor = 'var(--success-border)';
+        showSuccessPopup('Account Suspended', `Account directory access for user ${name} has been set to Suspended.`, true);
+      }
+    }
+
+    function filterUsersTable() {
+      const query = document.getElementById('user-search-input').value.toLowerCase().trim();
+      const roleFilter = document.getElementById('role-select').value;
+      const rows = document.getElementById('user-table-tbody').children;
+
+      for (let row of rows) {
+        const name = row.querySelector('.user-name-info').textContent.toLowerCase();
+        const handle = row.querySelector('.user-handle').textContent.toLowerCase();
+        const role = row.getAttribute('data-role');
+
+        const matchQuery = name.includes(query) || handle.includes(query);
+        const matchRole = roleFilter === 'All' || role === roleFilter;
+
+        if (matchQuery && matchRole) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+    }
+
+    function showSuccessPopup(title, message, isSuccess) {
+      const modal = document.getElementById('popup-modal');
+      const titleElm = document.getElementById('popup-title-elm');
+      const msgElm = document.getElementById('popup-msg-elm');
+      const card = document.getElementById('popup-card-theme');
+
+      titleElm.textContent = title;
+      msgElm.textContent = message;
+
+      if (isSuccess) {
+        card.style.borderColor = 'var(--success-color)';
+      } else {
+        card.style.borderColor = 'var(--error-color)';
+      }
+      
+      modal.classList.add('active');
+    }
+
+    function closeSuccessPopup() {
+      document.getElementById('popup-modal').classList.remove('active');
+    }
+
+    // Figma Tooling Functions
+    function toggleFigmaGrid() {
+      document.body.classList.toggle('figma-show-grid');
+      document.getElementById('btn-figma-grid').classList.toggle('active');
+    }
+
+    function toggleFigmaOutlines() {
+      document.body.classList.toggle('figma-show-outlines');
+      document.getElementById('btn-figma-outlines').classList.toggle('active');
+    }
+
+    function toggleFigmaTheme() {
+      document.body.classList.toggle('figma-dark-canvas');
+      const btn = document.getElementById('btn-figma-theme');
+      btn.classList.toggle('active');
+      if (document.body.classList.contains('figma-dark-canvas')) {
+        btn.textContent = 'Light Canvas';
+      } else {
+        btn.textContent = 'Dark Canvas';
+      }
+    }
+  </script>
+</body>
+</html>

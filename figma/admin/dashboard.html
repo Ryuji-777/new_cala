@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cala Admin - Dashboard Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f3f4f6;
+      --bg-card: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #cbd5e1;
+      
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-light: #e0e7ff;
+      
+      --success-color: #10b981;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+
+      --error-color: #ef4444;
+      --error-bg: #fef2f2;
+      --error-border: #fca5a5;
+
+      --font-sans: 'Inter', -apple-system, sans-serif;
+      --font-title: 'Plus Jakarta Sans', sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+      --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.03);
+    }
+
+    /* Figma Prototype Canvas Overrides */
+    body.figma-dark-canvas {
+      --bg-main: #121214;
+      --bg-card: #1a1a1e;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --border-color: #374151;
+      --primary-light: #312e81;
+    }
+
+    body.figma-show-outlines * {
+      outline: 1px dashed rgba(99, 102, 241, 0.45) !important;
+    }
+    body.figma-show-outlines *:hover {
+      outline: 1px dashed rgba(99, 102, 241, 1) !important;
+    }
+
+    /* Layout Grid Overlay */
+    .figma-grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 50px,
+        rgba(239, 68, 68, 0.02) 50px,
+        rgba(239, 68, 68, 0.02) 100px
+      );
+    }
+    body.figma-show-grid .figma-grid-overlay {
+      display: block;
+    }
+
+    /* Figma Toolbar Widget */
+    .figma-toolbar {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10000;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .figma-toolbar-title {
+      font-family: var(--font-title);
+      font-weight: 800;
+      color: #818cf8;
+      border-right: 1px solid rgba(255,255,255,0.2);
+      padding-right: 12px;
+    }
+    .figma-toolbar-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .figma-toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .figma-toolbar-btn.active {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      height: 70px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .logo {
+      font-family: var(--font-title);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 20px;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-link {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--primary-color);
+      background-color: var(--primary-light);
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border-color);
+      padding-left: 20px;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .title {
+      font-family: var(--font-title);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .alert-panel {
+      background-color: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-md);
+      padding: 16px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #92400e;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .alert-link {
+      color: var(--primary-color);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .alert-link:hover {
+      text-decoration: underline;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease, background-color 0.2s, border-color 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-title);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .stat-value.indigo {
+      color: var(--primary-color);
+    }
+
+    .stat-value.green {
+      color: var(--success-color);
+    }
+
+    /* Charts/Log Panel Layout */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .panel {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .panel-title {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    /* Simulated Chart Visualization */
+    .chart-container {
+      height: 200px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      padding-top: 20px;
+    }
+
+    .chart-bar-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-bar {
+      width: 100%;
+      background-color: var(--primary-light);
+      border-radius: 4px 4px 0 0;
+      transition: all 0.3s ease;
+      min-height: 10px;
+      position: relative;
+    }
+
+    .chart-bar:hover {
+      background-color: var(--primary-color);
+    }
+
+    .chart-bar::after {
+      content: attr(data-value);
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-primary);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .chart-bar:hover::after {
+      opacity: 1;
+    }
+
+    .chart-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    /* Logs Queue */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .log-item {
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      background-color: var(--bg-card);
+    }
+
+    .log-text {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .log-time {
+      color: var(--text-secondary);
+      font-size: 10px;
+      margin-top: 4px;
+      display: block;
+    }
+
+    footer {
+      background-color: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 24px 0;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: auto;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Layout Grid Overlay -->
+  <div class="figma-grid-overlay"></div>
+
+  <!-- Navigation Header -->
+  <header>
+    <div class="header-container">
+      <div class="logo">
+        <div class="logo-icon">C</div>
+        Cala
+      </div>
+      <nav class="nav-links">
+        <a href="dashboard.html" class="nav-link active">Dashboard</a>
+        <a href="approvals.html" class="nav-link">ID Approvals</a>
+        <a href="users.html" class="nav-link">User Directory</a>
+      </nav>
+      <div class="user-badge">
+        Admin Portal
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main>
+    <div class="dashboard-header">
+      <div>
+        <h2 class="title">System Dashboard</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Welcome back to your Cala Administration center.</p>
+      </div>
+    </div>
+
+    <!-- Warning Queue Bar -->
+    <div class="alert-panel">
+      <span>There are 3 pending user identities awaiting verification review.</span>
+      <a href="approvals.html" class="alert-link">Open Queue Review</a>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-grid">
+      <!-- Users Card -->
+      <div class="stat-card">
+        <div class="stat-label">Total Platform Users</div>
+        <div class="stat-value">154</div>
+      </div>
+
+      <!-- Verified Identities Card -->
+      <div class="stat-card">
+        <div class="stat-label">Verified Identities</div>
+        <div class="stat-value indigo">98</div>
+      </div>
+
+      <!-- Active Job Postings Card -->
+      <div class="stat-card">
+        <div class="stat-label">Active Job Posts</div>
+        <div class="stat-value">12</div>
+      </div>
+
+      <!-- Total Secured Escrow -->
+      <div class="stat-card">
+        <div class="stat-label">Total Escrow Vault</div>
+        <div class="stat-value green">$5,450.00</div>
+      </div>
+    </div>
+
+    <!-- Main Section Charts and Logs -->
+    <div class="dashboard-layout">
+      <!-- SVG Bar Chart Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">Verification Request Trends</h3>
+          <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Daily verifications processed</span>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 40px;" data-value="4"></div>
+            <span class="chart-label">Mon</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 90px;" data-value="9"></div>
+            <span class="chart-label">Tue</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 120px;" data-value="12"></div>
+            <span class="chart-label">Wed</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 70px;" data-value="7"></div>
+            <span class="chart-label">Thu</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 150px;" data-value="15"></div>
+            <span class="chart-label">Fri</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 30px;" data-value="3"></div>
+            <span class="chart-label">Sat</span>
+          </div>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 50px;" data-value="5"></div>
+            <span class="chart-label">Sun</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action System Log Queue -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">Recent System Logs</h3>
+        </div>
+
+        <div class="log-list">
+          <div class="log-item">
+            <span class="log-text">User @john_dev requested ID approval</span>
+            <span class="log-time">10 mins ago</span>
+          </div>
+          <div class="log-item">
+            <span class="log-text">Escrow payout released for Contract #12</span>
+            <span class="log-time">1 hour ago</span>
+          </div>
+          <div class="log-item">
+            <span class="log-text">Account suspended: @spam_profile</span>
+            <span class="log-time">2 hours ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Figma Floating Toolbar Widget -->
+  <div class="figma-toolbar">
+    <span class="figma-toolbar-title">Figma Prototype</span>
+    <button class="figma-toolbar-btn" id="btn-figma-grid" onclick="toggleFigmaGrid()">Grid</button>
+    <button class="figma-toolbar-btn" id="btn-figma-outlines" onclick="toggleFigmaOutlines()">Outlines</button>
+    <button class="figma-toolbar-btn" id="btn-figma-theme" onclick="toggleFigmaTheme()">Dark Canvas</button>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Cala Freelance Marketplace. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Figma Tooling Functions
+    function toggleFigmaGrid() {
+      document.body.classList.toggle('figma-show-grid');
+      document.getElementById('btn-figma-grid').classList.toggle('active');
+    }
+
+    function toggleFigmaOutlines() {
+      document.body.classList.toggle('figma-show-outlines');
+      document.getElementById('btn-figma-outlines').classList.toggle('active');
+    }
+
+    function toggleFigmaTheme() {
+      document.body.classList.toggle('figma-dark-canvas');
+      const btn = document.getElementById('btn-figma-theme');
+      btn.classList.toggle('active');
+      if (document.body.classList.contains('figma-dark-canvas')) {
+        btn.textContent = 'Light Canvas';
+      } else {
+        btn.textContent = 'Dark Canvas';
+      }
+    }
+  </script>
+</body>
+</html>
