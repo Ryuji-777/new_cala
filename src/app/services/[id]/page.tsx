@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,6 +32,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
   // Popup modal state
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
+
+  // Confirm modal state
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const loadServiceData = async () => {
     setIsLoading(true);
@@ -138,9 +142,16 @@ export default function ServiceDetailPage({ params }: PageProps) {
       return;
     }
 
-    const confirmHire = window.confirm(`Confirm direct hire for "${service.title}" at $${price.toFixed(2)}? This will lock funds in contract escrow.`);
-    if (!confirmHire) return;
+    setConfirmState({
+      message: `Confirm direct hire for "${service.title}" at $${price.toFixed(2)}? This will lock funds in contract escrow.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeHireService(price, walletBalance);
+      }
+    });
+  };
 
+  const executeHireService = async (price: number, walletBalance: number) => {
     setIsHiring(true);
 
     // 1. Deduct funds from Client
@@ -472,6 +483,14 @@ export default function ServiceDetailPage({ params }: PageProps) {
             popup.onClose?.();
             setPopup(null);
           }}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmPopup
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
         />
       )}
     </>

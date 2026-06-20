@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 // Predefined categories and skills from user spec
 const skillsCategories: Record<string, string[]> = {
@@ -46,6 +47,8 @@ export default function ClientDashboard() {
   
   // Popup modal state
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
+  // Confirm modal state
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
   // Notifications State
@@ -375,12 +378,9 @@ export default function ClientDashboard() {
     }
   };
 
-  // HIRE FREELANCER (duducts funds, starts contract, updates job status)
+  // HIRE FREELANCER (deducts funds, starts contract, updates job status)
   const handleHireFreelancer = async (application: any) => {
     if (!profile) return;
-    const confirmHire = window.confirm(`Are you sure you want to hire @${application.freelancer.screen_name} for $${Number(application.job.budget).toFixed(2)}?`);
-    if (!confirmHire) return;
-
     const hireBudget = Number(application.job.budget);
 
     // Re-verify client has enough funds
@@ -392,6 +392,16 @@ export default function ClientDashboard() {
       return;
     }
 
+    setConfirmState({
+      message: `Are you sure you want to hire @${application.freelancer.screen_name} for $${Number(application.job.budget).toFixed(2)}?`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeHireFreelancer(application, hireBudget);
+      }
+    });
+  };
+
+  const executeHireFreelancer = async (application: any, hireBudget: number) => {
     // 1. Deduct funds from client's wallet balance
     const nextClientBalance = Number(profile.wallet_balance) - hireBudget;
     const { error: walletError } = await supabase
@@ -477,9 +487,17 @@ export default function ClientDashboard() {
   const handleMarkContractCompleted = async (contract: any) => {
     if (!profile) return;
     const contractTitle = contract.job?.title || contract.service?.title || "Direct Service Hire";
-    const confirmComplete = window.confirm(`Confirm contract completion for "${contractTitle}". This will transfer the contract budget of $${Number(contract.budget).toFixed(2)} to @${contract.freelancer.screen_name}.`);
-    if (!confirmComplete) return;
 
+    setConfirmState({
+      message: `Confirm contract completion for "${contractTitle}". This will transfer the contract budget of $${Number(contract.budget).toFixed(2)} to @${contract.freelancer.screen_name}.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeMarkContractCompleted(contract, contractTitle);
+      }
+    });
+  };
+
+  const executeMarkContractCompleted = async (contract: any, contractTitle: string) => {
     // 1. Load freelancer profile to add funds
     const { data: freeProf } = await supabase
       .from("profiles")
@@ -552,9 +570,17 @@ export default function ClientDashboard() {
   const handleCancelContract = async (contract: any) => {
     if (!profile) return;
     const contractTitle = contract.job?.title || contract.service?.title || "Direct Service Hire";
-    const confirmCancel = window.confirm(`Cancel contract for "${contractTitle}"? The contract budget of $${Number(contract.budget).toFixed(2)} will be refunded back to your client wallet.`);
-    if (!confirmCancel) return;
 
+    setConfirmState({
+      message: `Cancel contract for "${contractTitle}"? The contract budget of $${Number(contract.budget).toFixed(2)} will be refunded back to your client wallet.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeCancelContract(contract, contractTitle);
+      }
+    });
+  };
+
+  const executeCancelContract = async (contract: any, contractTitle: string) => {
     // 1. Refund client's wallet balance
     const nextClientBalance = Number(profile.wallet_balance) + Number(contract.budget);
     const { error: refundError } = await supabase
@@ -1403,6 +1429,14 @@ export default function ClientDashboard() {
             popup.onClose?.();
             setPopup(null);
           }}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmPopup
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
         />
       )}
     </>

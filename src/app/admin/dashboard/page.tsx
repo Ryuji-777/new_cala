@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function AdminDashboardPage() {
 
   // Popup modal state
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
+  // Confirm modal state
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Tabs: "overview", "approvals", "users", "super-admin"
   const [activeTab, setActiveTab] = useState("overview");
@@ -273,10 +276,17 @@ export default function AdminDashboardPage() {
   // Delete User Handler (stages to archives first, then deletes profile)
   const handleDeleteUser = async (targetProfile: any) => {
     if (!currentAdminProfile) return;
-    const confirmDelete = window.confirm(`Are you sure you want to delete user @${targetProfile.screen_name || targetProfile.first_name}? This action will archive and delete their public profile.`);
     
-    if (!confirmDelete) return;
+    setConfirmState({
+      message: `Are you sure you want to delete user @${targetProfile.screen_name || targetProfile.first_name}? This action will archive and delete their public profile.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeDeleteUser(targetProfile);
+      }
+    });
+  };
 
+  const executeDeleteUser = async (targetProfile: any) => {
     // 1. Insert into archives
     const { error: archiveError } = await supabase.from("archives").insert({
       resource_type: "user",
@@ -914,6 +924,14 @@ export default function AdminDashboardPage() {
             popup.onClose?.();
             setPopup(null);
           }}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmPopup
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
         />
       )}
     </>

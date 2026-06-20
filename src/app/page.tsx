@@ -121,8 +121,12 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="footer">
-        <div className="container">
+        <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. Built with Next.js, Supabase, and Vercel.</p>
+          <div style={{ display: "flex", gap: "16px" }}>
+            <Link href="/terms-of-service" className="nav-link" style={{ fontWeight: "600" }}>Terms of Service</Link>
+            <Link href="/privacy-policy" className="nav-link" style={{ fontWeight: "600" }}>Privacy Policy</Link>
+          </div>
         </div>
       </footer>
     </>
