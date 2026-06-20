@@ -5,11 +5,12 @@
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --border-color: #e2e8f0;
-  
-  --primary-color: #3175b9; /* Matches blue in Guru/Freelancer screenshot */
+
+  --primary-color: #3175b9;
+  /* Matches blue in Guru/Freelancer screenshot */
   --primary-hover: #215994;
   --primary-light: #eff6ff;
-  
+
   --success-color: #22c55e;
   --success-bg: #f0fdf4;
   --success-border: #bbf7d0;
@@ -19,11 +20,11 @@
   --error-border: #fca5a5;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-  
+
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -52,7 +53,10 @@ a {
   text-decoration: none;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -266,7 +270,8 @@ button, input, select, textarea {
   border: 1px solid #cbd5e1;
   background-color: var(--bg-card);
   color: var(--text-primary);
-  transition: none; /* Instruction: Outline will NOT change color if user is typing */
+  transition: none;
+  /* Instruction: Outline will NOT change color if user is typing */
   outline: none;
 }
 
@@ -468,4 +473,3 @@ button, input, select, textarea {
   color: var(--text-secondary);
   font-size: 13px;
 }
-
