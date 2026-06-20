@@ -9,19 +9,16 @@ interface PopupProps {
 }
 
 export default function Popup({ message, type = "info", onClose }: PopupProps) {
-  // Determine icon, theme colors and border matching the premium aesthetic
-  let icon = "ℹ️";
+  // Determine theme colors and border matching the premium aesthetic
   let themeColor = "var(--primary-color)";
-  let borderStyle = "1px solid #bfdbfe";
+  let borderStyle = "1px solid #cbd5e1";
 
   if (type === "success") {
-    icon = "✅";
     themeColor = "var(--success-color)";
-    borderStyle = "1px solid #bbf7d0";
+    borderStyle = "1px solid var(--success-color)";
   } else if (type === "error") {
-    icon = "⚠️";
     themeColor = "var(--error-color)";
-    borderStyle = "1px solid #fca5a5";
+    borderStyle = "1px solid var(--error-color)";
   }
 
   return (
@@ -57,18 +54,6 @@ export default function Popup({ message, type = "info", onClose }: PopupProps) {
           overflow: "hidden",
         }}
       >
-
-        {/* Icon with scaling bounce animation */}
-        <div
-          style={{
-            fontSize: "40px",
-            marginBottom: "16px",
-            display: "inline-block",
-            animation: "popupBounce 0.5s ease-out",
-          }}
-        >
-          {icon}
-        </div>
 
         {/* Title */}
         <h4
