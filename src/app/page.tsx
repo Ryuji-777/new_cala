@@ -1,39 +1,23 @@
 import Link from "next/link";
 
 export default function Home() {
-  // Highlighted freelancers based on the screenshot
-  const featuredFreelancers = [
+  const categories = [
     {
-      name: "On Wave Software Group",
-      location: "Charlestown, Saint Paul Charlestown, St. Kitts",
-      earnings: "$472,608 /yr",
-      successRate: "100%",
-      avatar: "OW",
-      title: "Mobile and Web Application Development",
-      rate: "$30/hr",
-      minProject: "Starting at $120",
-      description: "Outsource your project to us and we will deliver the software you need on budget. Delivering tailored agile software solutions for all your software challenges. With over 20 years experience in develop...",
-      skills: ["Programming & Development", "Web Development & Design", "Angular", "App Development", "Back End Development", "Communications Technology", "Consultant"]
+      name: "Programming & Development",
+      skills: ["React", "Next.js", "TypeScript", "Node.js", "Python", "SQL", "Git", "API Integration", "Web Development"]
     },
     {
-      name: "Suretek Infosoft Pvt. Ltd.",
-      location: "Noida, Delhi, India",
-      earnings: "$406,705 /yr",
-      successRate: "100%",
-      avatar: "SI",
-      title: "AI Solutions",
-      rate: "$15/hr",
-      minProject: "Starting at $1K",
-      description: "Suretek InfoSoft develops AI-powered systems that transform business operations through automation, insight generation, and predictive intelligence. We design and implement models in machine learning...",
-      skills: ["Programming & Development", "Games (2D / 3D / Mobile)", "2D Games", "3D Games", "Android Game Development", "Artificial Intelligence", "Augmented Reality Development"]
+      name: "Design & Art",
+      skills: ["Graphic Design", "UI/UX Design", "Figma", "Photoshop", "Illustrator", "Logo Design", "Video Editing", "Illustration"]
+    },
+    {
+      name: "Writing & Translation",
+      skills: ["Technical Writing", "SEO Optimization", "Copywriting", "Translation", "Proofreading", "Content Marketing", "Editing"]
+    },
+    {
+      name: "Business & Finance",
+      skills: ["Financial Analysis", "Accounting", "Business Consulting", "Project Management", "Marketing Strategy", "Excel Modeling"]
     }
-  ];
-
-  const categories = [
-    { name: "Programming & Development", count: "120,400+ Freelancers" },
-    { name: "Design & Art", count: "85,200+ Freelancers" },
-    { name: "Writing & Translation", count: "64,100+ Freelancers" },
-    { name: "Business & Finance", count: "48,900+ Freelancers" }
   ];
 
   return (
@@ -56,128 +40,81 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="hero">
-        <div className="container hero-grid">
-          <div>
-            <h1 className="hero-title">
-              Find & Hire Expert <span>Freelancers</span> for Any Job
-            </h1>
-            <p className="hero-subtitle">
-              Cala connects world-class clients with specialized freelance talent. Build your profile, showcase your skills, and start collaborating today.
-            </p>
-            <div className="hero-ctas">
-              <Link href="/signup" className="btn btn-primary" style={{ padding: "12px 24px", fontSize: "16px" }}>
-                Get Started
-              </Link>
-              <Link href="/login" className="btn btn-outline" style={{ padding: "12px 24px", fontSize: "16px" }}>
-                Browse Jobs
-              </Link>
-            </div>
-          </div>
-          
-          {/* Small Decorative Grid illustrating the platform scale */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            {categories.map((cat, idx) => (
-              <div 
-                key={idx} 
-                style={{ 
-                  backgroundColor: "var(--bg-main)", 
-                  padding: "20px", 
-                  borderRadius: "var(--radius-sm)", 
-                  border: "1px solid var(--border-color)"
-                }}
-              >
-                <h3 style={{ fontSize: "14px", fontWeight: "700", marginBottom: "4px" }}>{cat.name}</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{cat.count}</p>
-              </div>
-            ))}
+      {/* Hero Section - Centered, Stats numbers removed */}
+      <section className="hero" style={{ textAlign: "center", padding: "80px 0" }}>
+        <div className="container" style={{ maxWidth: "800px", margin: "0 auto" }}>
+          <h1 className="hero-title" style={{ fontSize: "40px", fontWeight: 800, lineHeight: 1.2, marginBottom: "20px" }}>
+            Find & Hire Expert <span>Freelancers</span> for Any Job
+          </h1>
+          <p className="hero-subtitle" style={{ fontSize: "18px", color: "var(--text-secondary)", marginBottom: "32px", lineHeight: 1.6 }}>
+            Cala connects world-class clients with specialized freelance talent. Build your profile, showcase your skills, and start collaborating today.
+          </p>
+          <div className="hero-ctas" style={{ display: "flex", justifyContent: "center", gap: "16px" }}>
+            <Link href="/signup" className="btn btn-primary" style={{ padding: "12px 28px", fontSize: "16px" }}>
+              Get Started
+            </Link>
+            <Link href="/login" className="btn btn-outline" style={{ padding: "12px 28px", fontSize: "16px" }}>
+              Browse Jobs
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Main Showcase Section (Replicating Guru Layout) */}
-      <main style={{ padding: "48px 0", flex: 1 }}>
-        <div className="container" style={{ maxWidth: "960px" }}>
+      {/* Main Section - Categories and Skills Cards */}
+      <main style={{ padding: "64px 0", flex: 1, backgroundColor: "#fafafa" }}>
+        <div className="container" style={{ maxWidth: "1000px" }}>
           
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: "700" }}>Featured Experts on Cala</h2>
-            <Link href="/signup" style={{ color: "var(--primary-color)", fontSize: "14px", fontWeight: "600" }}>
-              View all listings &rarr;
-            </Link>
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
+              Explore Services by Category & Skills
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "14px", marginTop: "8px" }}>
+              Browse through our popular expert categories and select the specific skills you need for your project.
+            </p>
           </div>
 
-          {/* List of Mock Freelancer Cards */}
-          {featuredFreelancers.map((freelancer, index) => (
-            <div key={index} className="card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              
-              {/* Header row: Avatar, Name, Location, Earnings, Actions */}
-              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                
-                {/* Fake Avatar */}
-                <div style={{ 
-                  width: "48px", 
-                  height: "48px", 
-                  borderRadius: "var(--radius-sm)", 
-                  backgroundColor: "var(--primary-light)", 
-                  color: "var(--primary-color)", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  fontWeight: "bold",
-                  fontSize: "18px",
-                  border: "1px solid var(--border-color)"
-                }}>
-                  {freelancer.avatar}
+          {/* Grid of Categories and Skills Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "24px" }}>
+            {categories.map((cat, idx) => (
+              <div 
+                key={idx} 
+                className="card" 
+                style={{ 
+                  backgroundColor: "var(--bg-card)", 
+                  padding: "24px", 
+                  borderRadius: "8px", 
+                  border: "1px solid var(--border-color)",
+                  boxShadow: "var(--shadow-sm)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                  margin: 0
+                }}
+              >
+                <h3 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", borderBottom: "1px solid var(--border-color)", paddingBottom: "12px" }}>
+                  {cat.name}
+                </h3>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {cat.skills.map((skill, sIdx) => (
+                    <span 
+                      key={sIdx} 
+                      className="tag" 
+                      style={{ 
+                        fontSize: "11px", 
+                        padding: "4px 10px", 
+                        backgroundColor: "var(--bg-main)", 
+                        color: "var(--text-secondary)",
+                        borderRadius: "50px",
+                        border: "1px solid var(--border-color)"
+                      }}
+                    >
+                      {skill}
+                    </span>
+                  ))}
                 </div>
-
-                {/* Details */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <h3 style={{ fontSize: "16px", fontWeight: "700", color: "var(--primary-color)" }}>
-                        {freelancer.name}
-                      </h3>
-                      <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                        {freelancer.location}
-                      </p>
-                    </div>
-                    
-                    {/* Action button matching screenshot */}
-                    <Link href="/signup" className="btn btn-primary" style={{ padding: "6px 12px", fontSize: "13px" }}>
-                      Get a Quote
-                    </Link>
-                  </div>
-
-                  {/* Secondary info row */}
-                  <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "13px", color: "var(--text-secondary)" }}>
-                    <span><strong>{freelancer.earnings}</strong> earned</span>
-                    <span>&bull;</span>
-                    <span style={{ color: "#16a34a" }}><strong>{freelancer.successRate}</strong> Success Rate</span>
-                  </div>
-                </div>
-
               </div>
-
-              {/* Job Title and Description */}
-              <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "16px" }}>
-                <h4 style={{ fontSize: "15px", fontWeight: "700", marginBottom: "8px" }}>
-                  {freelancer.title} <span style={{ fontWeight: "400", color: "var(--text-secondary)", fontSize: "14px" }}> &bull; {freelancer.rate} &bull; {freelancer.minProject}</span>
-                </h4>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
-                  {freelancer.description}
-                </p>
-              </div>
-
-              {/* Skills tags */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {freelancer.skills.map((skill, sIdx) => (
-                  <span key={sIdx} className="tag">{skill}</span>
-                ))}
-              </div>
-
-            </div>
-          ))}
+            ))}
+          </div>
 
         </div>
       </main>

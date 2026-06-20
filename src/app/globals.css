@@ -30,6 +30,10 @@
   --radius-lg: 8px;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Reset and Base Styles */
 * {
   box-sizing: border-box;
