@@ -4,6 +4,7 @@ import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,6 +28,9 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isHiring, setIsHiring] = useState(false);
+
+  // Popup modal state
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
 
   const loadServiceData = async () => {
     setIsLoading(true);
@@ -116,7 +120,10 @@ export default function ServiceDetailPage({ params }: PageProps) {
     }
 
     if (!currentUserProfile.is_verified) {
-      alert("You must attach a valid ID and wait for admin approval before you can hire freelancers.");
+      setPopup({
+        message: "You must attach a valid ID and wait for admin approval before you can hire freelancers.",
+        type: "error"
+      });
       return;
     }
 
@@ -124,7 +131,10 @@ export default function ServiceDetailPage({ params }: PageProps) {
     const walletBalance = Number(currentUserProfile.wallet_balance);
 
     if (walletBalance < price) {
-      alert(`Insufficient funds. Your wallet balance is $${walletBalance.toFixed(2)}, but you need $${price.toFixed(2)}.`);
+      setPopup({
+        message: `Insufficient funds. Your wallet balance is $${walletBalance.toFixed(2)}, but you need $${price.toFixed(2)}.`,
+        type: "error"
+      });
       return;
     }
 
@@ -141,7 +151,10 @@ export default function ServiceDetailPage({ params }: PageProps) {
       .eq("id", currentUserProfile.id);
 
     if (walletError) {
-      alert("Hiring checkout failed: " + walletError.message);
+      setPopup({
+        message: "Hiring checkout failed: " + walletError.message,
+        type: "error"
+      });
       setIsHiring(false);
       return;
     }
@@ -161,7 +174,10 @@ export default function ServiceDetailPage({ params }: PageProps) {
       .single();
 
     if (contractError) {
-      alert("Contract creation failed: " + contractError.message);
+      setPopup({
+        message: "Contract creation failed: " + contractError.message,
+        type: "error"
+      });
       // Refund client
       await supabase
         .from("profiles")
@@ -185,9 +201,12 @@ export default function ServiceDetailPage({ params }: PageProps) {
       content: `Client @${currentUserProfile.screen_name} hired you directly for your service "${service.title}". Budget: $${price.toFixed(2)}.`,
     });
 
-    alert("Direct service hire completed successfully! Funds are held in escrow.");
+    setPopup({
+      message: "Direct service hire completed successfully! Funds are held in escrow.",
+      type: "success",
+      onClose: () => router.push("/client/dashboard")
+    });
     setIsHiring(false);
-    router.push("/client/dashboard");
   };
 
   const renderStars = (rating: number) => {
@@ -444,6 +463,17 @@ export default function ServiceDetailPage({ params }: PageProps) {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. All rights reserved.</p>
         </div>
       </footer>
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

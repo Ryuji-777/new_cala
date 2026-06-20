@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -13,6 +14,9 @@ export default function AdminDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [currentAdminProfile, setCurrentAdminProfile] = useState<any>(null);
+
+  // Popup modal state
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
 
   // Tabs: "overview", "approvals", "users", "super-admin"
   const [activeTab, setActiveTab] = useState("overview");
@@ -69,8 +73,11 @@ export default function AdminDashboardPage() {
       .single();
 
     if (error || !profile || (!profile.is_admin && !profile.is_super_admin)) {
-      alert("Access Denied: You are not authorized to view the Admin Dashboard.");
-      router.push("/profile/view");
+      setPopup({
+        message: "Access Denied: You are not authorized to view the Admin Dashboard.",
+        type: "error",
+        onClose: () => router.push("/profile/view")
+      });
       return;
     }
 
@@ -160,7 +167,10 @@ export default function AdminDashboardPage() {
       .eq("id", profileId);
 
     if (error) {
-      alert("Error approving ID: " + error.message);
+      setPopup({
+        message: "Error approving ID: " + error.message,
+        type: "error"
+      });
       return;
     }
 
@@ -179,7 +189,10 @@ export default function AdminDashboardPage() {
       content: "Administrator has successfully approved your ID. You are now verified on Cala.",
     });
 
-    alert(`Successfully approved ID for @${screenName}`);
+    setPopup({
+      message: `Successfully approved ID for @${screenName}`,
+      type: "success"
+    });
     loadStats();
     loadDataLists();
   };
@@ -194,7 +207,10 @@ export default function AdminDashboardPage() {
       .eq("id", profileId);
 
     if (error) {
-      alert("Error rejecting ID: " + error.message);
+      setPopup({
+        message: "Error rejecting ID: " + error.message,
+        type: "error"
+      });
       return;
     }
 
@@ -213,7 +229,10 @@ export default function AdminDashboardPage() {
       content: "Your ID document was rejected by the administrator. Please update and re-upload in your profile edit view.",
     });
 
-    alert(`Rejected ID attachment for @${screenName}. They will need to re-upload.`);
+    setPopup({
+      message: `Rejected ID attachment for @${screenName}. They will need to re-upload.`,
+      type: "success"
+    });
     loadStats();
     loadDataLists();
   };
@@ -228,7 +247,10 @@ export default function AdminDashboardPage() {
       .eq("id", targetId);
 
     if (error) {
-      alert("Failed to update admin role: " + error.message);
+      setPopup({
+        message: "Failed to update admin role: " + error.message,
+        type: "error"
+      });
       return;
     }
 
@@ -240,7 +262,10 @@ export default function AdminDashboardPage() {
       details: { target_id: targetId, screen_name: screenName },
     });
 
-    alert(`Updated admin status for @${screenName}`);
+    setPopup({
+      message: `Updated admin status for @${screenName}`,
+      type: "success"
+    });
     loadStats();
     loadDataLists();
   };
@@ -262,7 +287,10 @@ export default function AdminDashboardPage() {
     });
 
     if (archiveError) {
-      alert("Failed to archive user details: " + archiveError.message);
+      setPopup({
+        message: "Failed to archive user details: " + archiveError.message,
+        type: "error"
+      });
       return;
     }
 
@@ -273,7 +301,10 @@ export default function AdminDashboardPage() {
       .eq("id", targetProfile.id);
 
     if (deleteError) {
-      alert("Failed to delete user profile: " + deleteError.message);
+      setPopup({
+        message: "Failed to delete user profile: " + deleteError.message,
+        type: "error"
+      });
       return;
     }
 
@@ -285,7 +316,10 @@ export default function AdminDashboardPage() {
       details: { target_id: targetProfile.id, screen_name: targetProfile.screen_name, first_name: targetProfile.first_name },
     });
 
-    alert("User deleted and archived successfully.");
+    setPopup({
+      message: "User deleted and archived successfully.",
+      type: "success"
+    });
     loadStats();
     loadDataLists();
   };
@@ -391,7 +425,10 @@ export default function AdminDashboardPage() {
           });
         }
 
-        alert("User created successfully!");
+        setPopup({
+          message: "User created successfully!",
+          type: "success"
+        });
         setShowAddUserModal(false);
         setNewUserForm({ firstName: "", lastName: "", email: "", password: "", role: "both" });
         setFormValidated({});
@@ -868,6 +905,17 @@ export default function AdminDashboardPage() {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. Admin Portal.</p>
         </div>
       </footer>
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

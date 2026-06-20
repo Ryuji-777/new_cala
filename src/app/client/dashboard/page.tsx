@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 // Predefined categories and skills from user spec
 const skillsCategories: Record<string, string[]> = {
@@ -42,6 +43,9 @@ export default function ClientDashboard() {
   const supabase = createClient();
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Popup modal state
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
   // Notifications State
@@ -131,8 +135,11 @@ export default function ClientDashboard() {
     }
 
     if (!prof.is_client) {
-      alert("Please activate Client Mode in your profile settings first.");
-      router.push("/profile/view");
+      setPopup({
+        message: "Please activate Client Mode in your profile settings first.",
+        type: "error",
+        onClose: () => router.push("/profile/view")
+      });
       return;
     }
 
@@ -353,7 +360,10 @@ export default function ClientDashboard() {
     if (error) {
       setPostError("Failed to post job: " + error.message);
     } else {
-      alert("Job posted successfully!");
+      setPopup({
+        message: "Job posted successfully!",
+        type: "success"
+      });
       // Reset form
       setJobTitle("");
       setJobDescription("");
@@ -375,7 +385,10 @@ export default function ClientDashboard() {
 
     // Re-verify client has enough funds
     if (profile.wallet_balance < hireBudget) {
-      alert(`Insufficient funds. Your wallet balance is $${Number(profile.wallet_balance).toFixed(2)}, but you need $${hireBudget.toFixed(2)}.`);
+      setPopup({
+        message: `Insufficient funds. Your wallet balance is $${Number(profile.wallet_balance).toFixed(2)}, but you need $${hireBudget.toFixed(2)}.`,
+        type: "error"
+      });
       return;
     }
 
@@ -387,7 +400,10 @@ export default function ClientDashboard() {
       .eq("id", profile.id);
 
     if (walletError) {
-      alert("Hiring failed during wallet checkout: " + walletError.message);
+      setPopup({
+        message: "Hiring failed during wallet checkout: " + walletError.message,
+        type: "error"
+      });
       return;
     }
 
@@ -405,7 +421,10 @@ export default function ClientDashboard() {
       .single();
 
     if (contractError) {
-      alert("Hiring failed during contract creation: " + contractError.message);
+      setPopup({
+        message: "Hiring failed during contract creation: " + contractError.message,
+        type: "error"
+      });
       // Refund client
       await supabase
         .from("profiles")
@@ -447,7 +466,10 @@ export default function ClientDashboard() {
       content: `Client @${profile.screen_name} hired you for "${application.job.title}". Budget: $${hireBudget.toFixed(2)}.`,
     });
 
-    alert(`Successfully hired @${application.freelancer.screen_name}! Funds are held in contract escrow.`);
+    setPopup({
+      message: `Successfully hired @${application.freelancer.screen_name}! Funds are held in contract escrow.`,
+      type: "success"
+    });
     loadClientData();
   };
 
@@ -466,7 +488,10 @@ export default function ClientDashboard() {
       .single();
 
     if (!freeProf) {
-      alert("Failed to find freelancer profile.");
+      setPopup({
+        message: "Failed to find freelancer profile.",
+        type: "error"
+      });
       return;
     }
 
@@ -479,7 +504,10 @@ export default function ClientDashboard() {
       .eq("id", contract.freelancer_id);
 
     if (transError) {
-      alert("Funds transfer failed: " + transError.message);
+      setPopup({
+        message: "Funds transfer failed: " + transError.message,
+        type: "error"
+      });
       return;
     }
 
@@ -512,7 +540,10 @@ export default function ClientDashboard() {
       content: `Client @${profile.screen_name} marked the contract for "${contractTitle}" as completed. $${Number(contract.budget).toFixed(2)} has been transferred to your wallet.`,
     });
 
-    alert("Contract completed and freelancer paid! Please leave feedback for them.");
+    setPopup({
+      message: "Contract completed and freelancer paid! Please leave feedback for them.",
+      type: "success"
+    });
     setReviewContract(contract);
     loadClientData();
   };
@@ -532,7 +563,10 @@ export default function ClientDashboard() {
       .eq("id", profile.id);
 
     if (refundError) {
-      alert("Refund failed: " + refundError.message);
+      setPopup({
+        message: "Refund failed: " + refundError.message,
+        type: "error"
+      });
       return;
     }
 
@@ -557,7 +591,10 @@ export default function ClientDashboard() {
       content: `Client @${profile.screen_name} has cancelled the contract for "${contract.job.title}".`,
     });
 
-    alert("Contract cancelled and funds refunded to your wallet.");
+    setPopup({
+      message: "Contract cancelled and funds refunded to your wallet.",
+      type: "success"
+    });
     loadClientData();
   };
 
@@ -567,7 +604,10 @@ export default function ClientDashboard() {
     if (!profile || !reviewContract || !comment.trim() || isSubmittingReview) return;
 
     if (reviewedContractIds.has(reviewContract.id)) {
-      alert("You have already submitted a review for this contract.");
+      setPopup({
+        message: "You have already submitted a review for this contract.",
+        type: "error"
+      });
       setReviewContract(null);
       setComment("");
       return;
@@ -587,7 +627,10 @@ export default function ClientDashboard() {
 
     if (error) {
       if (error.message.includes("unique_contract_reviewer")) {
-        alert("You have already submitted a review for this contract.");
+        setPopup({
+          message: "You have already submitted a review for this contract.",
+          type: "error"
+        });
         // Sync set locally
         setReviewedContractIds(prev => {
           const next = new Set(prev);
@@ -595,10 +638,16 @@ export default function ClientDashboard() {
           return next;
         });
       } else {
-        alert("Failed to submit review: " + error.message);
+        setPopup({
+          message: "Failed to submit review: " + error.message,
+          type: "error"
+        });
       }
     } else {
-      alert("Review submitted successfully! Thank you.");
+      setPopup({
+        message: "Review submitted successfully! Thank you.",
+        type: "success"
+      });
       setReviewedContractIds(prev => {
         const next = new Set(prev);
         next.add(reviewContract.id);
@@ -1345,6 +1394,17 @@ export default function ClientDashboard() {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. All rights reserved.</p>
         </div>
       </footer>
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

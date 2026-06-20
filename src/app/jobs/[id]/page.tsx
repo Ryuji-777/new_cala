@@ -4,6 +4,7 @@ import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,6 +18,9 @@ export default function JobDetailPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+  // Popup modal state
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
 
   const [job, setJob] = useState<any>(null);
   const [clientProfile, setClientProfile] = useState<any>(null);
@@ -157,7 +161,10 @@ export default function JobDetailPage({ params }: PageProps) {
         content: `@${currentUserProfile.screen_name} applied to your job posting "${job.title}".`,
       });
 
-      alert("Proposal submitted successfully!");
+      setPopup({
+        message: "Proposal submitted successfully!",
+        type: "success"
+      });
       setHasApplied(true);
       setShowApplyModal(false);
       setCoverLetter("");
@@ -450,6 +457,17 @@ export default function JobDetailPage({ params }: PageProps) {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. All rights reserved.</p>
         </div>
       </footer>
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

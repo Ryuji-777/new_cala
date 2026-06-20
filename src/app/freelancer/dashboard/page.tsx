@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 // Predefined categories from user spec
 const categories = [
@@ -23,6 +24,9 @@ export default function FreelancerDashboard() {
   const supabase = createClient();
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Popup modal state
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
   // Notifications State
@@ -121,8 +125,11 @@ export default function FreelancerDashboard() {
     }
 
     if (!prof.is_freelancer) {
-      alert("Please activate Freelancer Mode in your profile settings first.");
-      router.push("/profile/view");
+      setPopup({
+        message: "Please activate Freelancer Mode in your profile settings first.",
+        type: "error",
+        onClose: () => router.push("/profile/view")
+      });
       return;
     }
 
@@ -303,7 +310,10 @@ export default function FreelancerDashboard() {
     if (error) {
       setPostServiceError("Failed to offer service: " + error.message);
     } else {
-      alert("Service offered successfully!");
+      setPopup({
+        message: "Service offered successfully!",
+        type: "success"
+      });
       setServiceTitle("");
       setServiceDescription("");
       setServicePrice("");
@@ -388,7 +398,10 @@ export default function FreelancerDashboard() {
         content: `@${profile.screen_name} applied to your job posting "${applyJob.title}".`,
       });
 
-      alert("Application submitted successfully!");
+      setPopup({
+        message: "Application submitted successfully!",
+        type: "success"
+      });
       setApplyJob(null);
       setCoverLetter("");
       setApplyFieldValidated(false);
@@ -402,7 +415,10 @@ export default function FreelancerDashboard() {
     if (!profile || !reviewContract || !comment.trim() || isSubmittingReview) return;
 
     if (reviewedContractIds.has(reviewContract.id)) {
-      alert("You have already submitted a review for this contract.");
+      setPopup({
+        message: "You have already submitted a review for this contract.",
+        type: "error"
+      });
       setReviewContract(null);
       setComment("");
       return;
@@ -422,7 +438,10 @@ export default function FreelancerDashboard() {
 
     if (error) {
       if (error.message.includes("unique_contract_reviewer")) {
-        alert("You have already submitted a review for this contract.");
+        setPopup({
+          message: "You have already submitted a review for this contract.",
+          type: "error"
+        });
         // Sync set locally
         setReviewedContractIds(prev => {
           const next = new Set(prev);
@@ -430,10 +449,16 @@ export default function FreelancerDashboard() {
           return next;
         });
       } else {
-        alert("Failed to submit review: " + error.message);
+        setPopup({
+          message: "Failed to submit review: " + error.message,
+          type: "error"
+        });
       }
     } else {
-      alert("Thank you for your feedback! Review submitted.");
+      setPopup({
+        message: "Thank you for your feedback! Review submitted.",
+        type: "success"
+      });
       setReviewedContractIds(prev => {
         const next = new Set(prev);
         next.add(reviewContract.id);
@@ -1225,6 +1250,17 @@ export default function FreelancerDashboard() {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. All rights reserved.</p>
         </div>
       </footer>
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

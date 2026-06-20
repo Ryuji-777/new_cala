@@ -8,28 +8,164 @@ import { createClient } from "@/utils/supabase/client";
 // Searchable location data
 const countriesData = [
   {
-    name: "United States",
-    states: ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"]
+    name: "Philippines",
+    states: [
+      "Metro Manila",
+      "Calabarzon",
+      "Central Luzon",
+      "Central Visayas",
+      "Western Visayas",
+      "Davao Region",
+      "Northern Mindanao",
+      "Bicol Region",
+      "Ilocos Region",
+      "Cagayan Valley",
+      "Mimaropa",
+      "Eastern Visayas",
+      "Zamboanga Peninsula",
+      "Soccsksargen",
+      "Caraga",
+      "Cordillera Administrative Region",
+      "BARMM"
+    ]
   },
   {
-    name: "Canada",
-    states: ["Alberta", "British Columbia", "Manitoba", "New Brunswick", "Newfoundland and Labrador", "Nova Scotia", "Ontario", "Prince Edward Island", "Quebec", "Saskatchewan", "Northwest Territories", "Nunavut", "Yukon"]
+    name: "Singapore",
+    states: [
+      "Central Region",
+      "East Region",
+      "North Region",
+      "North-East Region",
+      "West Region"
+    ]
+  },
+  {
+    name: "Japan",
+    states: [
+      "Tokyo",
+      "Osaka",
+      "Kyoto",
+      "Hokkaido",
+      "Fukuoka",
+      "Aichi",
+      "Kanagawa",
+      "Okinawa",
+      "Chiba",
+      "Saitama"
+    ]
+  },
+  {
+    name: "South Korea",
+    states: [
+      "Seoul",
+      "Busan",
+      "Incheon",
+      "Daegu",
+      "Daejeon",
+      "Gwangju",
+      "Ulsan",
+      "Gyeonggi",
+      "Gangwon",
+      "Jeju"
+    ]
   },
   {
     name: "India",
-    states: ["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Noida"]
+    states: [
+      "Andhra Pradesh",
+      "Arunachal Pradesh",
+      "Assam",
+      "Bihar",
+      "Chhattisgarh",
+      "Goa",
+      "Gujarat",
+      "Haryana",
+      "Himachal Pradesh",
+      "Jharkhand",
+      "Karnataka",
+      "Kerala",
+      "Madhya Pradesh",
+      "Maharashtra",
+      "Manipur",
+      "Meghalaya",
+      "Mizoram",
+      "Nagaland",
+      "Odisha",
+      "Punjab",
+      "Rajasthan",
+      "Sikkim",
+      "Tamil Nadu",
+      "Telangana",
+      "Tripura",
+      "Uttar Pradesh",
+      "Uttarakhand",
+      "West Bengal",
+      "Delhi",
+      "Noida"
+    ]
   },
   {
-    name: "St. Kitts & Nevis",
-    states: ["Saint Paul Charlestown", "Saint George Basseterre", "Saint John Capisterre", "Saint Mary Cayon", "Saint Peter Basseterre", "Saint Thomas Middle Island", "Trinity Palmetto Point", "Saint James Windward", "Saint John Figtree", "Saint Thomas Lowland"]
+    name: "Malaysia",
+    states: [
+      "Kuala Lumpur",
+      "Selangor",
+      "Penang",
+      "Johor",
+      "Sabah",
+      "Sarawak",
+      "Perak",
+      "Pahang",
+      "Melaka",
+      "Kedah"
+    ]
   },
   {
-    name: "United Kingdom",
-    states: ["England", "Scotland", "Wales", "Northern Ireland"]
+    name: "Thailand",
+    states: [
+      "Bangkok",
+      "Chiang Mai",
+      "Phuket",
+      "Chonburi",
+      "Nonthaburi",
+      "Nakhon Ratchasima"
+    ]
   },
   {
-    name: "Australia",
-    states: ["New South Wales", "Queensland", "South Australia", "Tasmania", "Victoria", "Western Australia", "Australian Capital Territory", "Northern Territory"]
+    name: "Indonesia",
+    states: [
+      "Jakarta",
+      "West Java",
+      "Central Java",
+      "East Java",
+      "Bali",
+      "Yogyakarta",
+      "Banten",
+      "North Sumatra"
+    ]
+  },
+  {
+    name: "Vietnam",
+    states: [
+      "Hanoi",
+      "Ho Chi Minh City",
+      "Da Nang",
+      "Hai Phong",
+      "Can Tho",
+      "Binh Duong"
+    ]
+  },
+  {
+    name: "China",
+    states: [
+      "Beijing",
+      "Shanghai",
+      "Guangdong",
+      "Zhejiang",
+      "Jiangsu",
+      "Sichuan",
+      "Fujian",
+      "Hubei"
+    ]
   }
 ];
 
