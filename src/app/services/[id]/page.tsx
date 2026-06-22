@@ -16,6 +16,14 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const supabase = createClient();
   const { id: serviceId } = use(params);
 
+  const handleGoBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
@@ -265,11 +273,6 @@ export default function ServiceDetailPage({ params }: PageProps) {
                 <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
                   Logged in as: {currentUserProfile.first_name} {currentUserProfile.last_name}
                 </span>
-                {currentUserProfile.is_freelancer ? (
-                  <Link href="/freelancer/dashboard" className="nav-link">Workspace</Link>
-                ) : (
-                  <Link href="/client/dashboard" className="nav-link">Workspace</Link>
-                )}
                 <Link href="/profile/view" className="nav-link">My Profile</Link>
               </>
             ) : (
@@ -284,7 +287,17 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
       {/* Main content with side by side layout */}
       <main style={{ padding: "48px 24px", flex: 1 }}>
-        <div className="container" style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+        <div className="container">
+          <div style={{ marginBottom: "24px" }}>
+            <button 
+              onClick={handleGoBack} 
+              className="btn btn-outline" 
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", fontSize: "14px" }}
+            >
+              ← Back
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
           
           {/* LEFT COLUMN: FREELANCER PROFILE CARD (35% width on desktop) */}
           <div style={{ flex: "1 1 350px", maxWidth: "420px" }}>
@@ -465,6 +478,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
             </div>
           </div>
 
+          </div>
         </div>
       </main>
 

@@ -151,13 +151,6 @@ export default function PublicProfilePage({ params }: PageProps) {
             Cala
           </Link>
           <nav className="nav-links">
-            <button 
-              onClick={handleGoBack} 
-              className="nav-link" 
-              style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-            >
-              ← Back
-            </button>
             {currentUserId ? (
               <Link href="/profile/view" className="nav-link">My Profile</Link>
             ) : (
@@ -171,7 +164,16 @@ export default function PublicProfilePage({ params }: PageProps) {
       </header>
 
       {/* Profile Detail View */}
-      <main style={{ padding: "48px 24px", flex: 1, display: "flex", justifyContent: "center" }}>
+      <main style={{ padding: "48px 24px", flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ width: "100%", maxWidth: "700px", marginBottom: "24px" }}>
+          <button 
+            onClick={handleGoBack} 
+            className="btn btn-outline" 
+            style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", fontSize: "14px" }}
+          >
+            ← Back
+          </button>
+        </div>
         <div className="card" style={{ width: "100%", maxWidth: "700px", padding: "40px" }}>
           
           {/* Header row */}

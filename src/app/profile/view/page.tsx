@@ -598,13 +598,6 @@ export default function ProfileViewPage() {
             Cala
           </Link>
           <nav className="nav-links">
-            <button 
-              onClick={handleGoBack} 
-              className="nav-link" 
-              style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-            >
-              ← Back
-            </button>
             <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
               Log Out
             </button>
@@ -615,6 +608,15 @@ export default function ProfileViewPage() {
       {/* Main Profile Layout */}
       <main style={{ padding: "48px 24px", flex: 1, display: "flex", justifyContent: "center" }}>
         <div className="container" style={{ maxWidth: "800px" }}>
+          <div style={{ marginBottom: "24px" }}>
+            <button 
+              onClick={handleGoBack} 
+              className="btn btn-outline" 
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", fontSize: "14px" }}
+            >
+              ← Back
+            </button>
+          </div>
           
           {/* WALLET & STATUS BANNER */}
           <div className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "var(--primary-light)", borderColor: "#bfdbfe" }}>
