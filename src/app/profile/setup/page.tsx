@@ -253,6 +253,43 @@ export default function ProfileSetupPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [idFile, setIdFile] = useState<File | null>(null);
 
+  // Profile Picture State
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const validateImageFile = (file: File): string => {
+    const validExtensions = ["png", "jpg", "jpeg"];
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!validExtensions.includes(fileExt)) {
+      return "Invalid file type. Only PNG and JPG images are allowed.";
+    }
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return "File is too large. Maximum size allowed is 5MB.";
+    }
+    return "";
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAvatarError(null);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const errorMsg = validateImageFile(file);
+      if (errorMsg) {
+        setAvatarError(errorMsg);
+        setAvatarFile(null);
+        setAvatarPreview(null);
+      } else {
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+      }
+    } else {
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    }
+  };
+
   // Searchable Country Dropdown States
   const [countryQuery, setCountryQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -432,7 +469,7 @@ export default function ProfileSetupPage() {
     setValidatedFields(allValidated);
 
     // If there are validation errors, block submission
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0 || avatarError) {
       return;
     }
 
@@ -459,6 +496,22 @@ export default function ProfileSetupPage() {
         }
       }
 
+      let avatarUrl = null;
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split(".").pop();
+        const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("attachments")
+          .upload(fileName, avatarFile, { cacheControl: "3600", upsert: true });
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(fileName);
+          avatarUrl = publicUrl;
+        }
+      }
+
       // Get auth user details to pass email/names to upsert
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -482,6 +535,7 @@ export default function ProfileSetupPage() {
           state: selectedState,
           zip: zip,
           id_attachment_url: idAttachmentUrl,
+          avatar_url: avatarUrl,
           is_freelancer: isFreelancer,
           is_client: isClient,
           is_verified: false, // Wait for admin approval
@@ -840,6 +894,33 @@ export default function ProfileSetupPage() {
                 </div>
               </div>
             )}
+
+            {/* Profile Picture (Avatar) - Optional */}
+            <div className="form-group" style={{ marginTop: "24px" }}>
+              <label className="form-label" htmlFor="avatarFile">Profile Picture (Optional)</label>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                Upload a PNG or JPG photo to show as your profile picture on the website (max 5MB).
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                {avatarPreview && (
+                  <img
+                    src={avatarPreview}
+                    alt="Profile Preview"
+                    style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary-color)" }}
+                  />
+                )}
+                <input
+                  id="avatarFile"
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  style={{ display: "block", fontSize: "14px" }}
+                  onChange={handleAvatarChange}
+                />
+              </div>
+              {avatarError && (
+                <span className="form-error" style={{ display: "block", marginTop: "4px" }}>{avatarError}</span>
+              )}
+            </div>
 
             {/* File ID attachment */}
             <div className="form-group" style={{ marginTop: "24px" }}>

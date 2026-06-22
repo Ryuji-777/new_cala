@@ -56,6 +56,44 @@ export default function FreelancerDashboard() {
   const [serviceValidatedFields, setServiceValidatedFields] = useState<Record<string, boolean>>({});
   const [activeServiceField, setActiveServiceField] = useState<string | null>(null);
   const [postServiceError, setPostServiceError] = useState<string | null>(null);
+
+  // Service Work Attachment States
+  const [serviceWorkFile, setServiceWorkFile] = useState<File | null>(null);
+  const [serviceWorkDesc, setServiceWorkDesc] = useState("");
+  const [serviceWorkFileError, setServiceWorkFileError] = useState<string | null>(null);
+  const [serviceWorkFilePreview, setServiceWorkFilePreview] = useState<string | null>(null);
+
+  const validateServiceWorkFile = (file: File): string => {
+    const validExtensions = ["png", "jpg", "jpeg"];
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!validExtensions.includes(fileExt)) {
+      return "Invalid file type. Only PNG and JPG images are allowed.";
+    }
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return "File is too large. Maximum size allowed is 5MB.";
+    }
+    return "";
+  };
+
+  const handleServiceWorkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setServiceWorkFileError(null);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const errorMsg = validateServiceWorkFile(file);
+      if (errorMsg) {
+        setServiceWorkFileError(errorMsg);
+        setServiceWorkFile(null);
+        setServiceWorkFilePreview(null);
+      } else {
+        setServiceWorkFile(file);
+        setServiceWorkFilePreview(URL.createObjectURL(file));
+      }
+    } else {
+      setServiceWorkFile(null);
+      setServiceWorkFilePreview(null);
+    }
+  };
   
   // Messaging state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -320,7 +358,7 @@ export default function FreelancerDashboard() {
     const allValidated = { serviceTitle: true, servicePrice: true, serviceDeliveryDays: true, serviceDescription: true };
     setServiceValidatedFields(allValidated);
 
-    if (Object.keys(serviceErrors).length > 0) return;
+    if (Object.keys(serviceErrors).length > 0 || serviceWorkFileError) return;
     if (!profile) return;
 
     if (!profile.is_verified) {
@@ -328,7 +366,7 @@ export default function FreelancerDashboard() {
       return;
     }
 
-    const { error } = await supabase
+    const { data: newService, error: serviceError } = await supabase
       .from("services")
       .insert({
         freelancer_id: profile.id,
@@ -337,11 +375,40 @@ export default function FreelancerDashboard() {
         price: Number(servicePrice),
         delivery_days: parseInt(serviceDeliveryDays, 10),
         category: serviceCategory,
-      });
+      })
+      .select("id")
+      .single();
 
-    if (error) {
-      setPostServiceError("Failed to offer service: " + error.message);
+    if (serviceError || !newService) {
+      setPostServiceError("Failed to offer service: " + (serviceError?.message || "Insertion error"));
     } else {
+      // If work sample is selected, upload it
+      if (serviceWorkFile) {
+        try {
+          const fileExt = serviceWorkFile.name.split(".").pop();
+          const fileName = `${profile.id}/service-works-${Date.now()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from("attachments")
+            .upload(fileName, serviceWorkFile, { cacheControl: "3600", upsert: true });
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from("attachments")
+              .getPublicUrl(fileName);
+
+            await supabase
+              .from("service_works")
+              .insert({
+                service_id: newService.id,
+                image_url: publicUrl,
+                description: serviceWorkDesc.trim() || "Work sample deliverable image.",
+              });
+          }
+        } catch (uploadErr) {
+          console.error("Failed to upload service work sample:", uploadErr);
+        }
+      }
+
       setPopup({
         message: "Service offered successfully!",
         type: "success"
@@ -351,6 +418,10 @@ export default function FreelancerDashboard() {
       setServicePrice("");
       setServiceDeliveryDays("");
       setServiceCategory("Programming & Development");
+      setServiceWorkFile(null);
+      setServiceWorkDesc("");
+      setServiceWorkFilePreview(null);
+      setServiceWorkFileError(null);
       setServiceValidatedFields({});
       setShowPostServiceModal(false);
       loadFreelancerData();
@@ -873,7 +944,7 @@ export default function FreelancerDashboard() {
 
               {myServices.length === 0 && (
                 <div style={{ textAlign: "center", padding: "48px 0", border: "1px dashed var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fff" }}>
-                  <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>You haven't offered any services yet.</p>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>You haven&apos;t offered any services yet.</p>
                   <button 
                     onClick={() => setShowPostServiceModal(true)} 
                     className="btn btn-primary"
@@ -1000,9 +1071,43 @@ export default function FreelancerDashboard() {
                             {serviceDescription.length}/600
                           </span>
                         </div>
-                        {serviceValidatedFields.serviceDescription && serviceErrors.serviceDescription && (
-                          <span className="form-error">{serviceErrors.serviceDescription}</span>
+                      </div>
+
+                      {/* Optional Work Sample Attachment */}
+                      <div className="form-group" style={{ border: "1px solid var(--border-color)", padding: "16px", borderRadius: "var(--radius-sm)", backgroundColor: "#f8fafc", marginTop: "16px" }}>
+                        <label className="form-label">Attach Work Sample / Showcase (Optional)</label>
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "12px" }}>
+                          Add a PNG or JPG sample of your work to show clients what to expect (max 5MB).
+                        </p>
+                        
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+                          {serviceWorkFilePreview && (
+                            <img 
+                              src={serviceWorkFilePreview} 
+                              alt="Work Preview" 
+                              style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
+                            />
+                          )}
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg"
+                            style={{ fontSize: "14px" }}
+                            onChange={handleServiceWorkFileChange}
+                          />
+                        </div>
+                        {serviceWorkFileError && (
+                          <span className="form-error" style={{ display: "block", marginBottom: "12px" }}>{serviceWorkFileError}</span>
                         )}
+
+                        <label className="form-label" htmlFor="serviceWorkDesc">Work Sample Description</label>
+                        <textarea
+                          id="serviceWorkDesc"
+                          className="form-input"
+                          style={{ minHeight: "80px", width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "13px" }}
+                          value={serviceWorkDesc}
+                          onChange={(e) => setServiceWorkDesc(e.target.value)}
+                          placeholder="Briefly describe this sample work (e.g. E-commerce design created for a retail client)..."
+                        />
                       </div>
 
                       <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
@@ -1015,6 +1120,10 @@ export default function FreelancerDashboard() {
                             setServicePrice("");
                             setServiceDeliveryDays("");
                             setServiceCategory("Programming & Development");
+                            setServiceWorkFile(null);
+                            setServiceWorkDesc("");
+                            setServiceWorkFilePreview(null);
+                            setServiceWorkFileError(null);
                             setServiceValidatedFields({});
                             setPostServiceError(null);
                           }} 

@@ -232,6 +232,71 @@ export default function ProfileViewPage() {
   const [editedSkills, setEditedSkills] = useState<string[]>([]);
   const [idFile, setIdFile] = useState<File | null>(null);
 
+  // Profile Picture State
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Portfolio States
+  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [newPortfolioFile, setNewPortfolioFile] = useState<File | null>(null);
+  const [newPortfolioDesc, setNewPortfolioDesc] = useState("");
+  const [newPortfolioError, setNewPortfolioError] = useState<string | null>(null);
+  const [newPortfolioPreview, setNewPortfolioPreview] = useState<string | null>(null);
+  const [showAddPortfolioModal, setShowAddPortfolioModal] = useState(false);
+  const [isSubmittingPortfolio, setIsSubmittingPortfolio] = useState(false);
+
+  const validateImageFile = (file: File): string => {
+    const validExtensions = ["png", "jpg", "jpeg"];
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!validExtensions.includes(fileExt)) {
+      return "Invalid file type. Only PNG and JPG images are allowed.";
+    }
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return "File is too large. Maximum size allowed is 5MB.";
+    }
+    return "";
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAvatarError(null);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const errorMsg = validateImageFile(file);
+      if (errorMsg) {
+        setAvatarError(errorMsg);
+        setAvatarFile(null);
+        setAvatarPreview(null);
+      } else {
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+      }
+    } else {
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    }
+  };
+
+  const handlePortfolioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewPortfolioError(null);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const errorMsg = validateImageFile(file);
+      if (errorMsg) {
+        setNewPortfolioError(errorMsg);
+        setNewPortfolioFile(null);
+        setNewPortfolioPreview(null);
+      } else {
+        setNewPortfolioFile(file);
+        setNewPortfolioPreview(URL.createObjectURL(file));
+      }
+    } else {
+      setNewPortfolioFile(null);
+      setNewPortfolioPreview(null);
+    }
+  };
+
   // Country/State Dropdowns inside edit mode
   const [countryQuery, setCountryQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -284,6 +349,19 @@ export default function ProfileViewPage() {
 
     const skillsList = skillsData ? skillsData.map((s) => s.skill_name) : [];
     setUserSkills(skillsList);
+
+    if (profileData.avatar_url) {
+      setAvatarPreview(profileData.avatar_url);
+    }
+
+    if (profileData.is_freelancer) {
+      const { data: portData } = await supabase
+        .from("portfolio_items")
+        .select("*")
+        .eq("freelancer_id", user.id)
+        .order("created_at", { ascending: false });
+      if (portData) setPortfolio(portData);
+    }
 
     // Pre-fill edit fields
     setScreenName(profileData.screen_name);
@@ -497,7 +575,7 @@ export default function ProfileViewPage() {
     };
     setValidatedFields(allValidated);
 
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0 || avatarError) {
       return;
     }
 
@@ -522,6 +600,22 @@ export default function ProfileViewPage() {
         }
       }
 
+      let avatarUrl = profile.avatar_url;
+      if (avatarFile) {
+        const fileExt = avatarFile.name.split(".").pop();
+        const fileName = `${profile.id}/avatar-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("attachments")
+          .upload(fileName, avatarFile, { cacheControl: "3600", upsert: true });
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(fileName);
+          avatarUrl = publicUrl;
+        }
+      }
+
       // Update profiles
       const { error: updateError } = await supabase
         .from("profiles")
@@ -533,6 +627,7 @@ export default function ProfileViewPage() {
           state: selectedState,
           zip: zip,
           id_attachment_url: idAttachmentUrl,
+          avatar_url: avatarUrl,
           is_freelancer: isFreelancer,
           is_client: isClient,
           is_verified: idFile ? false : profile.is_verified, // Reset verification only if a new ID is uploaded
@@ -565,6 +660,87 @@ export default function ProfileViewPage() {
       setSubmitError("Failed to save profile modifications.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddPortfolioItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewPortfolioError(null);
+
+    if (!newPortfolioFile) {
+      setNewPortfolioError("Please select a portfolio image.");
+      return;
+    }
+    if (!newPortfolioDesc.trim()) {
+      setNewPortfolioError("Please enter a description for the portfolio item.");
+      return;
+    }
+
+    setIsSubmittingPortfolio(true);
+
+    try {
+      const fileExt = newPortfolioFile.name.split(".").pop();
+      const fileName = `${profile.id}/portfolio-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("attachments")
+        .upload(fileName, newPortfolioFile, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) {
+        setNewPortfolioError("Upload failed: " + uploadError.message);
+        setIsSubmittingPortfolio(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("attachments")
+        .getPublicUrl(fileName);
+
+      const { error: dbError } = await supabase
+        .from("portfolio_items")
+        .insert({
+          freelancer_id: profile.id,
+          image_url: publicUrl,
+          description: newPortfolioDesc.trim(),
+        });
+
+      if (dbError) {
+        setNewPortfolioError("Failed to save portfolio details: " + dbError.message);
+      } else {
+        setPopup({
+          message: "Portfolio item added successfully!",
+          type: "success"
+        });
+        setNewPortfolioFile(null);
+        setNewPortfolioDesc("");
+        setNewPortfolioPreview(null);
+        setShowAddPortfolioModal(false);
+        fetchProfileData();
+      }
+    } catch (err: any) {
+      setNewPortfolioError("An unexpected error occurred while adding portfolio.");
+    } finally {
+      setIsSubmittingPortfolio(false);
+    }
+  };
+
+  const handleDeletePortfolioItem = async (itemId: string) => {
+    const { error } = await supabase
+      .from("portfolio_items")
+      .delete()
+      .eq("id", itemId)
+      .eq("freelancer_id", profile.id);
+
+    if (error) {
+      setPopup({
+        message: "Failed to delete portfolio item: " + error.message,
+        type: "error"
+      });
+    } else {
+      setPopup({
+        message: "Portfolio item deleted successfully!",
+        type: "success"
+      });
+      fetchProfileData();
     }
   };
 
@@ -643,11 +819,23 @@ export default function ProfileViewPage() {
             <div className="card" style={{ marginTop: "24px" }}>
               
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <h2 style={{ fontSize: "24px", fontWeight: "800" }}>
-                      {profile.first_name} {profile.last_name}
-                    </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  {profile.avatar_url ? (
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="Avatar" 
+                      style={{ width: "64px", height: "64px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary-color)" }} 
+                    />
+                  ) : (
+                    <div style={{ width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: "700", color: "#64748b" }}>
+                      {profile.first_name[0]}{profile.last_name[0]}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <h2 style={{ fontSize: "24px", fontWeight: "800" }}>
+                        {profile.first_name} {profile.last_name}
+                      </h2>
                     
                     {/* Verification badge */}
                     {profile.is_verified ? (
@@ -665,6 +853,7 @@ export default function ProfileViewPage() {
                     @{profile.screen_name} &bull; {profile.city}, {profile.state}, {profile.country}
                   </p>
                 </div>
+              </div>
 
                 <button onClick={() => setIsEditing(true)} className="btn btn-outline">
                   Edit Profile
@@ -721,6 +910,48 @@ export default function ProfileViewPage() {
                 </div>
               )}
 
+              {/* Portfolio showcase */}
+              {profile.is_freelancer && (
+                <div style={{ marginTop: "32px", borderTop: "1px solid var(--border-color)", paddingTop: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <h4 style={{ fontSize: "16px", fontWeight: "800", color: "var(--text-primary)" }}>My Portfolio</h4>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAddPortfolioModal(true)} 
+                      className="btn btn-outline"
+                      style={{ padding: "6px 14px", fontSize: "13px" }}
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+                    {portfolio.map((item, idx) => (
+                      <div key={idx} style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", overflow: "hidden", backgroundColor: "#fff", display: "flex", flexDirection: "column" }}>
+                        <img 
+                          src={item.image_url} 
+                          alt="Portfolio Work" 
+                          style={{ width: "100%", height: "140px", objectFit: "cover" }} 
+                        />
+                        <div style={{ padding: "12px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "12px", lineHeight: "1.4" }}>{item.description}</p>
+                          <button 
+                            type="button" 
+                            onClick={() => handleDeletePortfolioItem(item.id)} 
+                            className="btn btn-outline" 
+                            style={{ width: "100%", padding: "4px", fontSize: "11px", color: "var(--error-color)", borderColor: "var(--error-border)", backgroundColor: "var(--error-bg)" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {portfolio.length === 0 && (
+                      <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No portfolio items added yet. Click &quot;+ Add Item&quot; to build your portfolio.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
           ) : (
             /* EDIT PROFILE VIEW */
@@ -735,6 +966,34 @@ export default function ProfileViewPage() {
 
               <form onSubmit={handleSaveEdits} noValidate>
                 
+                {/* Profile Picture Edit */}
+                <div className="form-group">
+                  <label className="form-label" htmlFor="editAvatarFile">Profile Picture (Optional)</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Profile Preview"
+                        style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary-color)" }}
+                      />
+                    ) : (
+                      <div style={{ width: "60px", height: "60px", borderRadius: "50%", backgroundColor: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: "700", color: "#64748b" }}>
+                        {profile.first_name[0]}{profile.last_name[0]}
+                      </div>
+                    )}
+                    <input
+                      id="editAvatarFile"
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg"
+                      style={{ fontSize: "14px" }}
+                      onChange={handleAvatarChange}
+                    />
+                  </div>
+                  {avatarError && (
+                    <span className="form-error" style={{ display: "block", marginTop: "4px" }}>{avatarError}</span>
+                  )}
+                </div>
+
                 {/* Screen Name */}
                 <div className="form-group">
                   <label className="form-label" htmlFor="screenName">Screen Name</label>
@@ -1040,6 +1299,72 @@ export default function ProfileViewPage() {
             setPopup(null);
           }}
         />
+      )}
+
+      {showAddPortfolioModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+          <div className="card" style={{ width: "100%", maxWidth: "500px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Add Portfolio Item</h3>
+            
+            {newPortfolioError && (
+              <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                {newPortfolioError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddPortfolioItem}>
+              <div className="form-group">
+                <label className="form-label">Portfolio Image</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+                  {newPortfolioPreview && (
+                    <img 
+                      src={newPortfolioPreview} 
+                      alt="Portfolio Preview" 
+                      style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg"
+                    onChange={handlePortfolioFileChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Work Description</label>
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: "100px", width: "100%", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "13px" }}
+                  value={newPortfolioDesc}
+                  onChange={(e) => setNewPortfolioDesc(e.target.value)}
+                  placeholder="Describe your role, tools used, and overall outcome of this project..."
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowAddPortfolioModal(false);
+                    setNewPortfolioFile(null);
+                    setNewPortfolioPreview(null);
+                    setNewPortfolioDesc("");
+                    setNewPortfolioError(null);
+                  }} 
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmittingPortfolio}>
+                  {isSubmittingPortfolio ? "Adding..." : "Add to Portfolio"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </>
   );

@@ -29,6 +29,7 @@ export default function PublicProfilePage({ params }: PageProps) {
   const [targetSkills, setTargetSkills] = useState<string[]>([]);
   const [targetServices, setTargetServices] = useState<any[]>([]);
   const [targetJobs, setTargetJobs] = useState<any[]>([]);
+  const [targetPortfolio, setTargetPortfolio] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,6 +96,16 @@ export default function PublicProfilePage({ params }: PageProps) {
           .eq("client_id", targetUserId)
           .order("created_at", { ascending: false });
         if (jobsData) setTargetJobs(jobsData);
+      }
+
+      // 6. Fetch portfolio items if freelancer
+      if (prof.is_freelancer) {
+        const { data: portData } = await supabase
+          .from("portfolio_items")
+          .select("*")
+          .eq("freelancer_id", targetUserId)
+          .order("created_at", { ascending: false });
+        if (portData) setTargetPortfolio(portData);
       }
 
       setIsLoading(false);
@@ -187,27 +198,40 @@ export default function PublicProfilePage({ params }: PageProps) {
           
           {/* Header row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800" }}>
-                  {targetProfile.first_name} {targetProfile.last_name}
-                </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              {targetProfile.avatar_url ? (
+                <img 
+                  src={targetProfile.avatar_url} 
+                  alt="Avatar" 
+                  style={{ width: "64px", height: "64px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--primary-color)" }} 
+                />
+              ) : (
+                <div style={{ width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: "700", color: "#64748b" }}>
+                  {targetProfile.first_name[0]}{targetProfile.last_name[0]}
+                </div>
+              )}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <h2 style={{ fontSize: "24px", fontWeight: "800" }}>
+                    {targetProfile.first_name} {targetProfile.last_name}
+                  </h2>
+                  
+                  {targetProfile.is_verified ? (
+                    <span style={{ fontSize: "11px", fontWeight: "700", backgroundColor: "var(--success-bg)", border: "1px solid var(--success-border)", color: "var(--success-color)", padding: "2px 8px", borderRadius: "50px" }}>
+                      Verified ID
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "11px", fontWeight: "700", backgroundColor: "var(--error-bg)", border: "1px solid var(--error-border)", color: "var(--error-color)", padding: "2px 8px", borderRadius: "50px" }}>
+                      Unverified Account
+                    </span>
+                  )}
+                </div>
                 
-                {targetProfile.is_verified ? (
-                  <span style={{ fontSize: "11px", fontWeight: "700", backgroundColor: "var(--success-bg)", border: "1px solid var(--success-border)", color: "var(--success-color)", padding: "2px 8px", borderRadius: "50px" }}>
-                    Verified ID
-                  </span>
-                ) : (
-                  <span style={{ fontSize: "11px", fontWeight: "700", backgroundColor: "var(--error-bg)", border: "1px solid var(--error-border)", color: "var(--error-color)", padding: "2px 8px", borderRadius: "50px" }}>
-                    Unverified Account
-                  </span>
-                )}
-              </div>
-              
-              <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px" }}>
                 @{targetProfile.screen_name} &bull; {targetProfile.city}, {targetProfile.state}, {targetProfile.country}
               </p>
             </div>
+          </div>
 
             {currentUserId && (
               <button onClick={handleMessageUser} className="btn btn-primary" style={{ padding: "8px 16px" }}>
@@ -248,6 +272,30 @@ export default function PublicProfilePage({ params }: PageProps) {
                 ))}
                 {targetSkills.length === 0 && (
                   <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No skills listed.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Portfolio gallery */}
+          {targetProfile.is_freelancer && (
+            <div style={{ marginBottom: "28px", borderTop: "1px solid var(--border-color)", paddingTop: "20px" }}>
+              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "12px" }}>Portfolio Showcase</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+                {targetPortfolio.map((item, idx) => (
+                  <div key={idx} style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", overflow: "hidden", backgroundColor: "#fff" }}>
+                    <img 
+                      src={item.image_url} 
+                      alt="Portfolio Work" 
+                      style={{ width: "100%", height: "130px", objectFit: "cover" }} 
+                    />
+                    <div style={{ padding: "12px" }}>
+                      <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0, lineHeight: "1.4" }}>{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+                {targetPortfolio.length === 0 && (
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No portfolio items uploaded.</p>
                 )}
               </div>
             </div>

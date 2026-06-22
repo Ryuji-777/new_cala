@@ -239,3 +239,27 @@ ALTER TABLE IF EXISTS public.reviews DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.system_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.archives DISABLE ROW LEVEL SECURITY;
 
+-- PORTFOLIO ITEMS TABLE
+-- Added for freelancers to showcase portfolio items
+CREATE TABLE IF NOT EXISTS public.portfolio_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    freelancer_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    image_url TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SERVICE WORKS TABLE
+-- Added for freelancers to attach work samples to services
+CREATE TABLE IF NOT EXISTS public.service_works (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    service_id UUID REFERENCES public.services(id) ON DELETE CASCADE NOT NULL,
+    image_url TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Disable row level security for these tables as well
+ALTER TABLE IF EXISTS public.portfolio_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.service_works DISABLE ROW LEVEL SECURITY;
+

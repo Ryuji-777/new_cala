@@ -35,6 +35,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
   const [completedTransactions, setCompletedTransactions] = useState(0);
   const [reviews, setReviews] = useState<any[]>([]);
   const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [serviceWorks, setServiceWorks] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isHiring, setIsHiring] = useState(false);
 
@@ -115,6 +116,15 @@ export default function ServiceDetailPage({ params }: PageProps) {
       setReviews(reviewsData);
       const sum = reviewsData.reduce((acc, curr) => acc + curr.rating, 0);
       setAvgRating(sum / reviewsData.length);
+    }
+
+    // 7. Fetch service work samples
+    const { data: worksData } = await supabase
+      .from("service_works")
+      .select("*")
+      .eq("service_id", serviceId);
+    if (worksData) {
+      setServiceWorks(worksData);
     }
 
     setIsLoading(false);
@@ -375,7 +385,7 @@ export default function ServiceDetailPage({ params }: PageProps) {
                         <strong>@{r.reviewer?.screen_name || "Client"}</strong>
                         {renderStars(r.rating)}
                       </div>
-                      <p style={{ color: "#444", fontStyle: "italic" }}>"{r.comment}"</p>
+                      <p style={{ color: "#444", fontStyle: "italic" }}>&quot;{r.comment}&quot;</p>
                     </div>
                   ))}
                 </div>
@@ -415,6 +425,27 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     {service.description}
                   </p>
                 </div>
+
+                {/* Service Work Gallery */}
+                {serviceWorks.length > 0 && (
+                  <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "24px", marginTop: "24px", marginBottom: "32px" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "16px" }}>Work Showcase / Deliverables</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                      {serviceWorks.map((work, idx) => (
+                        <div key={idx} style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-md)", overflow: "hidden", backgroundColor: "#fff" }}>
+                          <img 
+                            src={work.image_url} 
+                            alt="Work sample deliverable" 
+                            style={{ width: "100%", maxHeight: "300px", objectFit: "contain", backgroundColor: "#f8fafc" }} 
+                          />
+                          <div style={{ padding: "16px" }}>
+                            <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, lineHeight: "1.5" }}>{work.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Checkout / Hires triggers */}
