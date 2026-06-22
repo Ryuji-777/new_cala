@@ -263,3 +263,37 @@ CREATE TABLE IF NOT EXISTS public.service_works (
 ALTER TABLE IF EXISTS public.portfolio_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.service_works DISABLE ROW LEVEL SECURITY;
 
+-- Add image_urls column to jobs table to support 1-4 project screenshots/images
+ALTER TABLE IF EXISTS public.jobs ADD COLUMN IF NOT EXISTS image_urls TEXT[] DEFAULT '{}';
+
+-- Create attachments storage bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Enable RLS on storage.objects just in case
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Recreate policies for 'attachments' bucket to allow public uploads and downloads
+DROP POLICY IF EXISTS "Allow public read access on attachments" ON storage.objects;
+CREATE POLICY "Allow public read access on attachments"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'attachments');
+
+DROP POLICY IF EXISTS "Allow public insert access on attachments" ON storage.objects;
+CREATE POLICY "Allow public insert access on attachments"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'attachments');
+
+DROP POLICY IF EXISTS "Allow public update access on attachments" ON storage.objects;
+CREATE POLICY "Allow public update access on attachments"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'attachments')
+WITH CHECK (bucket_id = 'attachments');
+
+DROP POLICY IF EXISTS "Allow public delete access on attachments" ON storage.objects;
+CREATE POLICY "Allow public delete access on attachments"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'attachments');
+
+

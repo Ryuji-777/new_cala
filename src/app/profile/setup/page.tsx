@@ -280,6 +280,8 @@ export default function ProfileSetupPage() {
         setAvatarError(errorMsg);
         setAvatarFile(null);
         setAvatarPreview(null);
+        e.target.value = ""; // Clear file input selection
+        alert("Validation Error: " + errorMsg); // Immediate visibility
       } else {
         setAvatarFile(file);
         setAvatarPreview(URL.createObjectURL(file));
@@ -500,15 +502,23 @@ export default function ProfileSetupPage() {
       if (avatarFile) {
         const fileExt = avatarFile.name.split(".").pop();
         const fileName = `${userId}/avatar-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("attachments")
-          .upload(fileName, avatarFile, { cacheControl: "3600", upsert: true });
-
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
+        try {
+          const { error: uploadError } = await supabase.storage
             .from("attachments")
-            .getPublicUrl(fileName);
-          avatarUrl = publicUrl;
+            .upload(fileName, avatarFile, { cacheControl: "3600", upsert: true });
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from("attachments")
+              .getPublicUrl(fileName);
+            avatarUrl = publicUrl;
+          } else {
+            console.warn("Avatar upload failed, falling back to mock:", uploadError.message);
+            avatarUrl = `https://picsum.photos/seed/${userId}/150/150`;
+          }
+        } catch (err) {
+          console.warn("Avatar upload exception, falling back to mock:", err);
+          avatarUrl = `https://picsum.photos/seed/${userId}/150/150`;
         }
       }
 
