@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 import Popup from "@/components/Popup";
 import ConfirmPopup from "@/components/ConfirmPopup";
 
@@ -52,6 +53,19 @@ export default function AdminDashboardPage() {
   const [formActiveField, setFormActiveField] = useState<string | null>(null);
   const [formValidated, setFormValidated] = useState<Record<string, boolean>>({});
   const [newUserError, setNewUserError] = useState<string | null>(null);
+
+  // Admin creation form
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdminForm, setNewAdminForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
+  const [adminFormErrors, setAdminFormErrors] = useState<Record<string, string>>({});
+  const [adminFormActiveField, setAdminFormActiveField] = useState<string | null>(null);
+  const [adminFormValidated, setAdminFormValidated] = useState<Record<string, boolean>>({});
+  const [newAdminError, setNewAdminError] = useState<string | null>(null);
 
   // Promote admin search query
   const [promoteSearch, setPromoteSearch] = useState("");
@@ -646,6 +660,26 @@ export default function AdminDashboardPage() {
     setFormErrors(newErrors);
   }, [newUserForm]);
 
+  // Admin form validator trigger
+  useEffect(() => {
+    const newErrors: Record<string, string> = {};
+    Object.keys(newAdminForm).forEach((key) => {
+      const val = newAdminForm[key as keyof typeof newAdminForm];
+      const errorMsg = validateForm(key, val);
+      if (errorMsg) newErrors[key] = errorMsg;
+    });
+    setAdminFormErrors(newErrors);
+  }, [newAdminForm]);
+
+  const getAdminFormInputClass = (name: string) => {
+    const base = "form-input";
+    if (adminFormActiveField === name) return base;
+    if (adminFormValidated[name]) {
+      return adminFormErrors[name] ? `${base} is-invalid` : `${base} is-valid`;
+    }
+    return base;
+  };
+
   const getFormInputClass = (name: string) => {
     const base = "form-input";
     if (formActiveField === name) return base;
@@ -721,6 +755,83 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       setNewUserError("Failed to add user.");
+    }
+  };
+
+  // Add Admin Submission
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewAdminError(null);
+
+    const allValidated = { firstName: true, lastName: true, email: true, password: true };
+    setAdminFormValidated(allValidated);
+
+    if (Object.keys(adminFormErrors).length > 0) return;
+
+    try {
+      const tempSupabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: {
+            persistSession: false
+          }
+        }
+      );
+
+      const { data: signUpData, error: signUpError } = await tempSupabase.auth.signUp({
+        email: newAdminForm.email,
+        password: newAdminForm.password,
+        options: {
+          data: {
+            first_name: newAdminForm.firstName,
+            last_name: newAdminForm.lastName,
+          }
+        }
+      });
+
+      if (signUpError) {
+        setNewAdminError(signUpError.message);
+        return;
+      }
+
+      if (signUpData.user) {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            is_admin: true,
+            is_verified: true,
+            screen_name: `admin_${Math.floor(Math.random() * 100000)}`,
+            description: "System Administrator account.",
+          })
+          .eq("id", signUpData.user.id);
+
+        if (updateError) {
+          setNewAdminError(updateError.message);
+          return;
+        }
+
+        if (currentAdminProfile) {
+          await supabase.from("system_logs").insert({
+            actor_id: currentAdminProfile.id,
+            actor_email: currentAdminProfile.email,
+            action: "add_admin",
+            details: { target_email: newAdminForm.email },
+          });
+        }
+
+        setPopup({
+          message: "Administrator account created successfully!",
+          type: "success"
+        });
+        setShowAddAdminModal(false);
+        setNewAdminForm({ firstName: "", lastName: "", email: "", password: "" });
+        setAdminFormValidated({});
+        loadStats();
+        loadDataLists();
+      }
+    } catch (err: any) {
+      setNewAdminError(err.message || "Failed to add administrator.");
     }
   };
 
@@ -801,7 +912,6 @@ export default function AdminDashboardPage() {
             <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
               Welcome, {currentAdminProfile.first_name} ({isSuperAdmin ? "Super Admin" : "Admin"})
             </span>
-            <Link href="/profile/view" className="nav-link">My Profile</Link>
             
             {/* Notifications Bell Dropdown */}
             <div className="notif-container">
@@ -1171,6 +1281,93 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               )}
+
+              {/* ADD ADMIN MODAL */}
+              {showAddAdminModal && (
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+                  <div className="card" style={{ width: "100%", maxWidth: "450px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Create New Administrator</h3>
+                    
+                    {newAdminError && (
+                      <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                        {newAdminError}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAddAdmin} noValidate>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div className="form-group">
+                          <label className="form-label">First Name</label>
+                          <input
+                            type="text"
+                            value={newAdminForm.firstName}
+                            className={getAdminFormInputClass("firstName")}
+                            onChange={(e) => setNewAdminForm({ ...newAdminForm, firstName: e.target.value })}
+                            onFocus={() => setAdminFormActiveField("firstName")}
+                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, firstName: true })); }}
+                            required
+                          />
+                          {adminFormValidated.firstName && adminFormErrors.firstName && (
+                            <span className="form-error">{adminFormErrors.firstName}</span>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Last Name</label>
+                          <input
+                            type="text"
+                            value={newAdminForm.lastName}
+                            className={getAdminFormInputClass("lastName")}
+                            onChange={(e) => setNewAdminForm({ ...newAdminForm, lastName: e.target.value })}
+                            onFocus={() => setAdminFormActiveField("lastName")}
+                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, lastName: true })); }}
+                            required
+                          />
+                          {adminFormValidated.lastName && adminFormErrors.lastName && (
+                            <span className="form-error">{adminFormErrors.lastName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input
+                          type="email"
+                          value={newAdminForm.email}
+                          className={getAdminFormInputClass("email")}
+                          onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
+                          onFocus={() => setAdminFormActiveField("email")}
+                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, email: true })); }}
+                          required
+                        />
+                        {adminFormValidated.email && adminFormErrors.email && (
+                          <span className="form-error">{adminFormErrors.email}</span>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Password</label>
+                        <input
+                          type="password"
+                          value={newAdminForm.password}
+                          className={getAdminFormInputClass("password")}
+                          onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
+                          onFocus={() => setAdminFormActiveField("password")}
+                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, password: true })); }}
+                          required
+                        />
+                        {adminFormValidated.password && adminFormErrors.password && (
+                          <span className="form-error">{adminFormErrors.password}</span>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                        <button type="button" onClick={() => setShowAddAdminModal(false)} className="btn btn-outline">Cancel</button>
+                        <button type="submit" className="btn btn-primary">Create Admin</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1350,45 +1547,55 @@ export default function AdminDashboardPage() {
           {/* TAB 4: SUPER ADMIN CONTROLS */}
           {activeTab === "super-admin" && isSuperAdmin && (
             <div>
-              {/* PROMOTE ADMIN */}
-              <div className="card">
-                <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px" }}>Add System Administrators</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                  Search for any user screen name or email to grant/revoke admin status.
-                </p>
-                <input
-                  type="text"
-                  placeholder="Search user..."
-                  className="form-input"
-                  style={{ marginBottom: "16px" }}
-                  value={promoteSearch}
-                  onChange={(e) => setPromoteSearch(e.target.value)}
-                />
-                
-                {promoteSearch && (
-                  <div style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", maxHeight: "160px", overflowY: "auto" }}>
-                    {filteredPromoteList.map((user, idx) => (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid #f1f5f9", fontSize: "13px" }}>
-                        <span>
-                          <strong>{user.first_name} {user.last_name}</strong> (@{user.screen_name || "unset"}) &bull; {user.email}
-                        </span>
-                        
-                        {user.id !== currentAdminProfile.id && (
-                          <button 
-                            onClick={() => handleToggleAdminStatus(user.id, user.screen_name, !user.is_admin)}
-                            className="btn btn-outline"
-                            style={{ padding: "4px 8px", fontSize: "11px" }}
-                          >
-                            {user.is_admin ? "Demote from Admin" : "Promote to Admin"}
-                          </button>
-                        )}
-                      </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>
+                  System Administrators ({profiles.filter(p => p.is_admin).length})
+                </h3>
+                <button onClick={() => setShowAddAdminModal(true)} className="btn btn-primary">
+                  + Create Admin
+                </button>
+              </div>
+
+              {/* LIST ADMINS */}
+              <div style={{ overflowX: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fff" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
+                      <th style={{ padding: "12px 16px" }}>Name</th>
+                      <th style={{ padding: "12px 16px" }}>Username</th>
+                      <th style={{ padding: "12px 16px" }}>Email</th>
+                      <th style={{ padding: "12px 16px" }}>Role</th>
+                      <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profiles.filter(p => p.is_admin).map((p, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: "600" }}>{p.first_name} {p.last_name}</td>
+                        <td style={{ padding: "12px 16px" }}>@{p.screen_name || "unset"}</td>
+                        <td style={{ padding: "12px 16px" }}>{p.email}</td>
+                        <td style={{ padding: "12px 16px" }}>
+                          {p.is_super_admin ? (
+                            <span className="tag" style={{ backgroundColor: "#e0f2fe", color: "#0369a1", border: "1px solid #bae6fd" }}>Super Admin</span>
+                          ) : (
+                            <span className="tag" style={{ backgroundColor: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1" }}>Admin</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          {!p.is_super_admin && p.id !== currentAdminProfile.id && (
+                            <button 
+                              onClick={() => handleToggleAdminStatus(p.id, p.screen_name, false)}
+                              className="btn btn-outline" 
+                              style={{ padding: "4px 8px", fontSize: "12px", color: "var(--error-color)", borderColor: "var(--error-border)" }}
+                            >
+                              Demote
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                    {filteredPromoteList.length === 0 && (
-                      <p style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>No matching users found.</p>
-                    )}
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
