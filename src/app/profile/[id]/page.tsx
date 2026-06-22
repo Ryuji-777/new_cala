@@ -4,6 +4,7 @@ import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Popup from "@/components/Popup";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,6 +32,12 @@ export default function PublicProfilePage({ params }: PageProps) {
   const [targetJobs, setTargetJobs] = useState<any[]>([]);
   const [targetPortfolio, setTargetPortfolio] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Reporting state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -144,6 +151,49 @@ export default function PublicProfilePage({ params }: PageProps) {
     }
   };
 
+  const handleReportProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReportError(null);
+
+    if (!reportReason.trim()) {
+      setReportError("Please enter a reason for reporting this profile.");
+      return;
+    }
+
+    if (reportReason.trim().length < 10) {
+      setReportError("The reason must be at least 10 characters long.");
+      return;
+    }
+
+    if (!currentUserId) {
+      setReportError("You must be logged in to file a report.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("reports").insert({
+        reporter_id: currentUserId,
+        target_type: "profile",
+        target_id: targetUserId,
+        reason: reportReason.trim(),
+        status: "pending"
+      });
+
+      if (error) {
+        setReportError("Failed to submit report: " + error.message);
+      } else {
+        setPopup({
+          message: "Report submitted successfully! The administration team will review it shortly.",
+          type: "success"
+        });
+        setShowReportModal(false);
+        setReportReason("");
+      }
+    } catch (err: any) {
+      setReportError("An error occurred: " + err.message);
+    }
+  };
+
   if (isLoading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
@@ -234,9 +284,18 @@ export default function PublicProfilePage({ params }: PageProps) {
           </div>
 
             {currentUserId && (
-              <button onClick={handleMessageUser} className="btn btn-primary" style={{ padding: "8px 16px" }}>
-                Send Message
-              </button>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleMessageUser} className="btn btn-primary" style={{ padding: "8px 16px" }}>
+                  Send Message
+                </button>
+                <button 
+                  onClick={() => setShowReportModal(true)} 
+                  className="btn btn-outline" 
+                  style={{ padding: "8px 16px", color: "var(--error-color)", borderColor: "var(--error-border)" }}
+                >
+                  Report Profile
+                </button>
+              </div>
             )}
           </div>
 
@@ -376,6 +435,52 @@ export default function PublicProfilePage({ params }: PageProps) {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* REPORT PROFILE MODAL */}
+      {showReportModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+          <div className="card" style={{ width: "100%", maxWidth: "500px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "8px" }}>Report Profile: {targetProfile.first_name} {targetProfile.last_name}</h3>
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "16px" }}>Please explain why you are reporting this user&apos;s profile to the site moderators.</p>
+            
+            {reportError && (
+              <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                {reportError}
+              </div>
+            )}
+
+            <form onSubmit={handleReportProfile} noValidate>
+              <div className="form-group" style={{ marginBottom: "16px" }}>
+                <label className="form-label" style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600" }}>Reason for Report</label>
+                <textarea
+                  className="form-input"
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  style={{ minHeight: "120px", width: "100%", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px" }}
+                  placeholder="Provide clear reasons or evidence of guidelines violation (min 10 characters)..."
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button type="button" onClick={() => { setShowReportModal(false); setReportReason(""); setReportError(null); }} className="btn btn-outline" style={{ padding: "8px 16px", fontSize: "14px" }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: "var(--error-color)", borderColor: "var(--error-color)", padding: "8px 16px", fontSize: "14px" }}>Submit Report</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {popup && (
+        <Popup
+          message={popup.message}
+          type={popup.type}
+          onClose={() => {
+            popup.onClose?.();
+            setPopup(null);
+          }}
+        />
+      )}
     </>
   );
 }

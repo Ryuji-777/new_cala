@@ -66,6 +66,15 @@ export default function AdminDashboardPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // Moderation Reports State
+  const [reports, setReports] = useState<any[]>([]);
+  const [allJobs, setAllJobs] = useState<any[]>([]);
+  const [allServices, setAllServices] = useState<any[]>([]);
+  const [reportStatusFilter, setReportStatusFilter] = useState("all");
+  const [reportTypeFilter, setReportTypeFilter] = useState("all");
+  const [activeResolveReportId, setActiveResolveReportId] = useState<string | null>(null);
+  const [currentResolutionNotes, setCurrentResolutionNotes] = useState("");
+
   const verifyAdminAccess = async () => {
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -159,6 +168,25 @@ export default function AdminDashboardPage() {
       .select("*")
       .order("deleted_at", { ascending: false });
     if (archs) setArchives(archs);
+
+    // Fetch moderation reports
+    const { data: reps } = await supabase
+      .from("reports")
+      .select("*, reporter:profiles!reporter_id(first_name, last_name, screen_name)")
+      .order("created_at", { ascending: false });
+    if (reps) setReports(reps);
+
+    // Fetch jobs for report references
+    const { data: jobsData } = await supabase
+      .from("jobs")
+      .select("id, title, client_id");
+    if (jobsData) setAllJobs(jobsData);
+
+    // Fetch services for report references
+    const { data: servicesData } = await supabase
+      .from("services")
+      .select("id, title, freelancer_id");
+    if (servicesData) setAllServices(servicesData);
   };
 
   useEffect(() => {
@@ -494,6 +522,60 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleResolveReport = async (reportId: string, status: "resolved_no_violation" | "resolved_violation", targetReporterId: string) => {
+    if (!currentAdminProfile) return;
+    if (!currentResolutionNotes.trim()) {
+      setPopup({
+        message: "Please enter resolution notes before submitting.",
+        type: "error"
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("reports")
+      .update({
+        status,
+        resolution_notes: currentResolutionNotes.trim(),
+        resolved_by: currentAdminProfile.id,
+        resolved_at: new Date().toISOString()
+      })
+      .eq("id", reportId);
+
+    if (error) {
+      setPopup({
+        message: "Failed to resolve report: " + error.message,
+        type: "error"
+      });
+      return;
+    }
+
+    // Log action
+    await supabase.from("system_logs").insert({
+      actor_id: currentAdminProfile.id,
+      actor_email: currentAdminProfile.email,
+      action: "resolve_report",
+      details: { report_id: reportId, decision: status, notes: currentResolutionNotes.trim() },
+    });
+
+    // Notify user
+    const decisionText = status === "resolved_violation" ? "Violation Found ⚠️" : "No Violation Found ✅";
+    await supabase.from("notifications").insert({
+      user_id: targetReporterId,
+      title: `Moderation Report Decision: ${decisionText}`,
+      content: `The moderation team resolved the report you submitted. Resolution notes: "${currentResolutionNotes.trim()}"`,
+    });
+
+    setPopup({
+      message: `Report has been resolved as: ${status === "resolved_violation" ? "Violation Found" : "No Violation Found"}.`,
+      type: "success"
+    });
+    setActiveResolveReportId(null);
+    setCurrentResolutionNotes("");
+    loadStats();
+    loadDataLists();
+  };
+
   // Format Archive Details for Premium Display
   const renderArchiveDetails = (a: any) => {
     try {
@@ -687,6 +769,25 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesRole && matchesVerification;
   });
 
+  // Filter reports
+  const filteredReports = reports.filter((r) => {
+    let matchesStatus = true;
+    if (reportStatusFilter !== "all") {
+      matchesStatus = r.status === reportStatusFilter;
+    }
+
+    let matchesType = true;
+    if (reportTypeFilter !== "all") {
+      if (reportTypeFilter === "posting") {
+        matchesType = r.target_type === "job" || r.target_type === "service";
+      } else {
+        matchesType = r.target_type === reportTypeFilter;
+      }
+    }
+
+    return matchesStatus && matchesType;
+  });
+
   return (
     <>
       {/* Header */}
@@ -776,6 +877,12 @@ export default function AdminDashboardPage() {
               style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "users" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "users" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
             >
               User Management
+            </button>
+            <button 
+              onClick={() => setActiveTab("reports")} 
+              style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "reports" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "reports" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+            >
+              Reports ({reports.filter((r) => r.status === "pending").length})
             </button>
             {isSuperAdmin && (
               <>
@@ -1064,6 +1171,179 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: MODERATION REPORTS */}
+          {activeTab === "reports" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>
+                  Moderation Reports ({filteredReports.length !== reports.length ? `${filteredReports.length} of ${reports.length}` : reports.length})
+                </h3>
+              </div>
+
+              {/* Filters Bar */}
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px", alignItems: "center" }}>
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "4px", textTransform: "uppercase" }}>Filter by Status</label>
+                  <select
+                    value={reportStatusFilter}
+                    onChange={(e) => setReportStatusFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px", backgroundColor: "#fff" }}
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending Review</option>
+                    <option value="resolved_no_violation">Resolved (No Violation)</option>
+                    <option value="resolved_violation">Resolved (Violation Found)</option>
+                  </select>
+                </div>
+                <div style={{ width: "200px" }}>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "4px", textTransform: "uppercase" }}>Filter by Target Type</label>
+                  <select
+                    value={reportTypeFilter}
+                    onChange={(e) => setReportTypeFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px", backgroundColor: "#fff" }}
+                  >
+                    <option value="all">All Targets</option>
+                    <option value="profile">Profiles Only</option>
+                    <option value="posting">Postings (Jobs & Services)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* LIST REPORTS */}
+              <div style={{ overflowX: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fff" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
+                      <th style={{ padding: "12px 16px" }}>Reported Item</th>
+                      <th style={{ padding: "12px 16px" }}>Reported By</th>
+                      <th style={{ padding: "12px 16px" }}>Reason for Report</th>
+                      <th style={{ padding: "12px 16px" }}>Report Date</th>
+                      <th style={{ padding: "12px 16px" }}>Status</th>
+                      <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((r, idx) => {
+                      // Resolve target details helper
+                      let targetLabel = "Unknown Target";
+                      let targetLink = "#";
+
+                      if (r.target_type === "profile") {
+                        const prof = profiles.find((p) => p.id === r.target_id);
+                        targetLabel = prof ? `Profile: ${prof.first_name} ${prof.last_name} (@${prof.screen_name})` : `Profile ID: ${r.target_id}`;
+                        targetLink = `/profile/${r.target_id}`;
+                      } else if (r.target_type === "job") {
+                        const jb = allJobs.find((j) => j.id === r.target_id);
+                        targetLabel = jb ? `Job: ${jb.title}` : `Job ID: ${r.target_id}`;
+                        targetLink = `/jobs/${r.target_id}`;
+                      } else if (r.target_type === "service") {
+                        const sv = allServices.find((s) => s.id === r.target_id);
+                        targetLabel = sv ? `Service: ${sv.title}` : `Service ID: ${r.target_id}`;
+                        targetLink = `/services/${r.target_id}`;
+                      }
+
+                      return (
+                        <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)", verticalAlign: "top" }}>
+                          <td style={{ padding: "12px 16px", fontWeight: "600" }}>
+                            <Link href={targetLink} className="nav-link" style={{ color: "var(--primary-color)", textDecoration: "underline" }} target="_blank">
+                              {targetLabel}
+                            </Link>
+                          </td>
+                          <td style={{ padding: "12px 16px" }}>
+                            {r.reporter ? (
+                              <span>@{r.reporter.screen_name || `${r.reporter.first_name} ${r.reporter.last_name}`}</span>
+                            ) : (
+                              <span style={{ color: "var(--text-secondary)" }}>Anonymous</span>
+                            )}
+                          </td>
+                          <td style={{ padding: "12px 16px", maxWidth: "300px", wordBreak: "break-word" }}>{r.reason}</td>
+                          <td style={{ padding: "12px 16px", fontSize: "12px" }}>
+                            {new Date(r.created_at).toLocaleDateString()} {new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ padding: "12px 16px" }}>
+                            {r.status === "pending" && (
+                              <span className="tag" style={{ backgroundColor: "#fef3c7", color: "#d97706", border: "1px solid #fde68a" }}>
+                                Pending Review
+                              </span>
+                            )}
+                            {r.status === "resolved_no_violation" && (
+                              <span className="tag" style={{ backgroundColor: "var(--success-bg)", color: "var(--success-color)", border: "1px solid var(--success-border)" }}>
+                                No Violation
+                              </span>
+                            )}
+                            {r.status === "resolved_violation" && (
+                              <span className="tag" style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", border: "1px solid var(--error-border)" }}>
+                                Violation Found
+                              </span>
+                            )}
+
+                            {r.status !== "pending" && r.resolution_notes && (
+                              <div style={{ marginTop: "6px", fontSize: "11px", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                                Note: {r.resolution_notes}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                            {r.status === "pending" ? (
+                              activeResolveReportId === r.id ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "220px", float: "right" }}>
+                                  <textarea
+                                    value={currentResolutionNotes}
+                                    onChange={(e) => setCurrentResolutionNotes(e.target.value)}
+                                    placeholder="Enter resolution notes..."
+                                    style={{ width: "100%", minHeight: "60px", padding: "6px", fontSize: "12px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", textAlign: "left" }}
+                                  />
+                                  <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                                    <button 
+                                      onClick={() => handleResolveReport(r.id, "resolved_no_violation", r.reporter_id)}
+                                      className="btn btn-primary"
+                                      style={{ padding: "4px 8px", fontSize: "11px", backgroundColor: "var(--success-color)", borderColor: "var(--success-color)" }}
+                                    >
+                                      No Violation
+                                    </button>
+                                    <button 
+                                      onClick={() => handleResolveReport(r.id, "resolved_violation", r.reporter_id)}
+                                      className="btn btn-primary"
+                                      style={{ padding: "4px 8px", fontSize: "11px", backgroundColor: "var(--error-color)", borderColor: "var(--error-color)" }}
+                                    >
+                                      Violation Found
+                                    </button>
+                                    <button 
+                                      onClick={() => { setActiveResolveReportId(null); setCurrentResolutionNotes(""); }}
+                                      className="btn btn-outline"
+                                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => { setActiveResolveReportId(r.id); setCurrentResolutionNotes(""); }}
+                                  className="btn btn-primary"
+                                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                                >
+                                  Resolve
+                                </button>
+                              )
+                            ) : (
+                              <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>Resolved</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredReports.length === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>No reports found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

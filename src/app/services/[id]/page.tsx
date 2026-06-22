@@ -45,6 +45,11 @@ export default function ServiceDetailPage({ params }: PageProps) {
   // Confirm modal state
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
+  // Reporting state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportError, setReportError] = useState<string | null>(null);
+
   const loadServiceData = async () => {
     setIsLoading(true);
     
@@ -236,6 +241,49 @@ export default function ServiceDetailPage({ params }: PageProps) {
       onClose: () => router.push("/client/dashboard")
     });
     setIsHiring(false);
+  };
+
+  const handleReportService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReportError(null);
+
+    if (!reportReason.trim()) {
+      setReportError("Please enter a reason for reporting this service posting.");
+      return;
+    }
+
+    if (reportReason.trim().length < 10) {
+      setReportError("The reason must be at least 10 characters long.");
+      return;
+    }
+
+    if (!currentUserId) {
+      setReportError("You must be logged in to report a posting.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("reports").insert({
+        reporter_id: currentUserId,
+        target_type: "service",
+        target_id: serviceId,
+        reason: reportReason.trim(),
+        status: "pending"
+      });
+
+      if (error) {
+        setReportError("Failed to submit report: " + error.message);
+      } else {
+        setPopup({
+          message: "Report submitted successfully! The administration team will review this posting shortly.",
+          type: "success"
+        });
+        setShowReportModal(false);
+        setReportReason("");
+      }
+    } catch (err: any) {
+      setReportError("An error occurred: " + err.message);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -505,6 +553,17 @@ export default function ServiceDetailPage({ params }: PageProps) {
                     </Link>
                   </div>
                 )}
+                {currentUserId && !isOwnService && (
+                  <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
+                    <button 
+                      onClick={() => setShowReportModal(true)} 
+                      className="btn btn-outline" 
+                      style={{ padding: "6px 12px", fontSize: "12px", color: "var(--error-color)", borderColor: "var(--error-border)" }}
+                    >
+                      Report Posting
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -512,6 +571,41 @@ export default function ServiceDetailPage({ params }: PageProps) {
           </div>
         </div>
       </main>
+
+      {/* REPORT POSTING MODAL */}
+      {showReportModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+          <div className="card" style={{ width: "100%", maxWidth: "500px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "8px" }}>Report Service Posting: {service.title}</h3>
+            <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "16px" }}>Please explain why you are reporting this service posting to the site moderators.</p>
+            
+            {reportError && (
+              <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                {reportError}
+              </div>
+            )}
+
+            <form onSubmit={handleReportService} noValidate>
+              <div className="form-group" style={{ marginBottom: "16px" }}>
+                <label className="form-label" style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600" }}>Reason for Report</label>
+                <textarea
+                  className="form-input"
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  style={{ minHeight: "120px", width: "100%", padding: "10px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px" }}
+                  placeholder="Provide clear reasons or evidence of guidelines violation (min 10 characters)..."
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button type="button" onClick={() => { setShowReportModal(false); setReportReason(""); setReportError(null); }} className="btn btn-outline" style={{ padding: "8px 16px", fontSize: "14px" }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: "var(--error-color)", borderColor: "var(--error-color)", padding: "8px 16px", fontSize: "14px" }}>Submit Report</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="footer">

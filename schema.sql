@@ -297,3 +297,20 @@ ON storage.objects FOR DELETE
 USING (bucket_id = 'attachments');
 
 
+-- REPORTS TABLE
+-- Allows clients and freelancers to report profiles or postings (jobs/services)
+CREATE TABLE IF NOT EXISTS public.reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reporter_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    target_type TEXT NOT NULL CHECK (target_type IN ('profile', 'job', 'service')),
+    target_id UUID NOT NULL,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'resolved_no_violation', 'resolved_violation')),
+    resolution_notes TEXT,
+    resolved_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- Disable row level security for reports table
+ALTER TABLE IF EXISTS public.reports DISABLE ROW LEVEL SECURITY;
