@@ -304,6 +304,9 @@ export default function ProfileSetupPage() {
   const [isStateOpen, setIsStateOpen] = useState(false);
   const stateRef = useRef<HTMLDivElement>(null);
 
+  // Data Privacy Agreement State
+  const [agreeDataPrivacy, setAgreeDataPrivacy] = useState(false);
+
   // Validation States
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validatedFields, setValidatedFields] = useState<Record<string, boolean>>({});
@@ -385,6 +388,9 @@ export default function ProfileSetupPage() {
       case "idFile":
         if (!value) return "You must upload a valid ID document to verify your account.";
         return "";
+      case "agreeDataPrivacy":
+        if (!value) return "You must agree to the Data Privacy Act of 2012 to continue.";
+        return "";
       default:
         return "";
     }
@@ -402,6 +408,7 @@ export default function ProfileSetupPage() {
       state: selectedState,
       zip,
       idFile,
+      agreeDataPrivacy,
     };
 
     Object.keys(fieldsToValidate).forEach((key) => {
@@ -419,7 +426,7 @@ export default function ProfileSetupPage() {
     }
 
     setErrors(newErrors);
-  }, [screenName, description, city, selectedCountry, selectedState, zip, isFreelancer, isClient, idFile]);
+  }, [screenName, description, city, selectedCountry, selectedState, zip, isFreelancer, isClient, idFile, agreeDataPrivacy]);
 
   // Toggle skills checkbox
   const handleSkillToggle = (skill: string) => {
@@ -467,6 +474,7 @@ export default function ProfileSetupPage() {
       zip: true,
       idFile: true,
       role: true,
+      agreeDataPrivacy: true,
     };
     setValidatedFields(allValidated);
 
@@ -956,6 +964,28 @@ export default function ProfileSetupPage() {
               />
               {validatedFields.idFile && errors.idFile && (
                 <span className="form-error">{errors.idFile}</span>
+              )}
+            </div>
+
+            {/* Data Privacy Agreement Checkbox */}
+            <div className="form-group" style={{ marginTop: "24px", backgroundColor: "#f8fafc", padding: "16px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "14px", fontWeight: "500", cursor: "pointer", lineHeight: "1.4" }}>
+                <input
+                  type="checkbox"
+                  checked={agreeDataPrivacy}
+                  onChange={(e) => {
+                    setAgreeDataPrivacy(e.target.checked);
+                    setValidatedFields(prev => ({ ...prev, agreeDataPrivacy: true }));
+                  }}
+                  style={{ width: "18px", height: "18px", marginTop: "2px", cursor: "pointer" }}
+                  required
+                />
+                <span>
+                  I agree to the processing of my personal data in accordance with the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong> of the Philippines. I understand that my ID document and profile details will be verified by the platform administrators.
+                </span>
+              </label>
+              {validatedFields.agreeDataPrivacy && errors.agreeDataPrivacy && (
+                <span className="form-error" style={{ display: "block", marginTop: "8px" }}>{errors.agreeDataPrivacy}</span>
               )}
             </div>
 
