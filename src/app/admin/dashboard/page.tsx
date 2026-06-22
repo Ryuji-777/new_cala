@@ -56,6 +56,11 @@ export default function AdminDashboardPage() {
   // Promote admin search query
   const [promoteSearch, setPromoteSearch] = useState("");
 
+  // User search and filters
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [verificationFilter, setVerificationFilter] = useState("all");
+
   // Notifications State
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -632,7 +637,7 @@ export default function AdminDashboardPage() {
         loadStats();
         loadDataLists();
       }
-    } catch (err: any) {
+    } catch (err) {
       setNewUserError("Failed to add user.");
     }
   };
@@ -655,6 +660,32 @@ export default function AdminDashboardPage() {
   const filteredPromoteList = profiles.filter((p) =>
     (p.screen_name || p.email).toLowerCase().includes(promoteSearch.toLowerCase())
   );
+
+  // Filter profiles for user management search and filter selectors
+  const filteredProfiles = profiles.filter((p) => {
+    const searchString = `${p.first_name || ""} ${p.last_name || ""} @${p.screen_name || ""} ${p.email || ""}`.toLowerCase();
+    const matchesSearch = searchString.includes(userSearchQuery.toLowerCase());
+
+    let matchesRole = true;
+    if (roleFilter === "freelancer") {
+      matchesRole = p.is_freelancer;
+    } else if (roleFilter === "client") {
+      matchesRole = p.is_client;
+    } else if (roleFilter === "admin") {
+      matchesRole = p.is_admin && !p.is_super_admin;
+    } else if (roleFilter === "super-admin") {
+      matchesRole = p.is_super_admin;
+    }
+
+    let matchesVerification = true;
+    if (verificationFilter === "verified") {
+      matchesVerification = p.is_verified;
+    } else if (verificationFilter === "pending") {
+      matchesVerification = !p.is_verified;
+    }
+
+    return matchesSearch && matchesRole && matchesVerification;
+  });
 
   return (
     <>
@@ -810,7 +841,7 @@ export default function AdminDashboardPage() {
                       @{user.screen_name} &bull; {user.email} &bull; {user.city}, {user.state}, {user.country}
                     </p>
                     <p style={{ fontSize: "14px", marginTop: "10px", fontStyle: "italic", color: "#555" }}>
-                      "{user.description}"
+                      &quot;{user.description}&quot;
                     </p>
                     
                     {/* Simulated Attached ID display */}
@@ -842,10 +873,49 @@ export default function AdminDashboardPage() {
           {activeTab === "users" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>All Registered Accounts ({profiles.length})</h3>
+                <h3 style={{ fontSize: "18px", fontWeight: "700" }}>
+                  All Registered Accounts ({filteredProfiles.length !== profiles.length ? `${filteredProfiles.length} of ${profiles.length}` : profiles.length})
+                </h3>
                 <button onClick={() => setShowAddUserModal(true)} className="btn btn-primary">
                   + Add User
                 </button>
+              </div>
+
+              {/* Search and Filters Bar */}
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px", alignItems: "center" }}>
+                <div style={{ flex: "1 1 200px" }}>
+                  <input
+                    type="text"
+                    placeholder="Search name, username, or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px" }}
+                  />
+                </div>
+                <div style={{ width: "150px" }}>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px", backgroundColor: "#fff" }}
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="freelancer">Freelancer</option>
+                    <option value="client">Client</option>
+                    <option value="admin">Admin</option>
+                    <option value="super-admin">Super Admin</option>
+                  </select>
+                </div>
+                <div style={{ width: "180px" }}>
+                  <select
+                    value={verificationFilter}
+                    onChange={(e) => setVerificationFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "14px", backgroundColor: "#fff" }}
+                  >
+                    <option value="all">All Verifications</option>
+                    <option value="pending">Pending ID Verification</option>
+                    <option value="verified">Verified ID</option>
+                  </select>
+                </div>
               </div>
 
               {/* LIST USERS */}
@@ -862,7 +932,7 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {profiles.map((p, idx) => (
+                    {filteredProfiles.map((p, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
                         <td style={{ padding: "12px 16px", fontWeight: "600" }}>{p.first_name} {p.last_name}</td>
                         <td style={{ padding: "12px 16px" }}>@{p.screen_name || "unset"}</td>
