@@ -174,6 +174,7 @@ export default function FreelancerDashboard() {
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order("created_at", { ascending: true });
 
+    let loadedPartners: any[] = [];
     if (msgList) {
       // Group by distinct conversation partner
       const partners: Record<string, any> = {};
@@ -183,7 +184,38 @@ export default function FreelancerDashboard() {
           partners[partner.id] = partner;
         }
       });
-      setConversations(Object.values(partners));
+      loadedPartners = Object.values(partners);
+      setConversations(loadedPartners);
+    }
+
+    // Check if redirected with a specific chat partner query preset
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const chatPartnerId = params.get("chat");
+      if (chatPartnerId) {
+        const existingPartner = loadedPartners.find((p) => p.id === chatPartnerId);
+        if (existingPartner) {
+          setSelectedChatPartner(existingPartner);
+          const { data: chatMsgs } = await supabase
+            .from("messages")
+            .select("*")
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${user.id})`)
+            .order("created_at", { ascending: true });
+          if (chatMsgs) setChatMessages(chatMsgs);
+        } else {
+          // Fallback: fetch target profile details if not in conversation list yet
+          const { data: targetProf } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", chatPartnerId)
+            .single();
+          if (targetProf) {
+            setConversations((prev) => [...prev, targetProf]);
+            setSelectedChatPartner(targetProf);
+          }
+        }
+        setActiveTab("messages");
+      }
     }
 
     // 6. Fetch My Services

@@ -109,12 +109,21 @@ export default function PublicProfilePage({ params }: PageProps) {
       return;
     }
 
-    // Insert an initial simulated greeting in messages so they appear in conversation history
-    const { error } = await supabase.from("messages").insert({
-      sender_id: currentUserId,
-      receiver_id: targetUserId,
-      content: `Hello! I viewed your public profile and would like to connect.`,
-    });
+    // Check if there is an existing message history between the two users
+    const { data: existingMsgs } = await supabase
+      .from("messages")
+      .select("id")
+      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${targetUserId}),and(sender_id.eq.${targetUserId},receiver_id.eq.${currentUserId})`)
+      .limit(1);
+
+    if (!existingMsgs || existingMsgs.length === 0) {
+      // First time chatting: insert announcement message
+      await supabase.from("messages").insert({
+        sender_id: currentUserId,
+        receiver_id: targetUserId,
+        content: `You are now chatting with ${targetProfile.first_name} ${targetProfile.last_name}`,
+      });
+    }
 
     // Redirect to respective workspace messaging with chat partner preset
     if (currentUserProfile.is_freelancer) {

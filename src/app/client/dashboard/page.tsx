@@ -192,6 +192,7 @@ export default function ClientDashboard() {
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
       .order("created_at", { ascending: true });
 
+    let loadedPartners: any[] = [];
     if (msgList) {
       const partners: Record<string, any> = {};
       msgList.forEach((m) => {
@@ -200,7 +201,38 @@ export default function ClientDashboard() {
           partners[partner.id] = partner;
         }
       });
-      setConversations(Object.values(partners));
+      loadedPartners = Object.values(partners);
+      setConversations(loadedPartners);
+    }
+
+    // Check if redirected with a specific chat partner query preset
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const chatPartnerId = params.get("chat");
+      if (chatPartnerId) {
+        const existingPartner = loadedPartners.find((p) => p.id === chatPartnerId);
+        if (existingPartner) {
+          setSelectedChatPartner(existingPartner);
+          const { data: chatMsgs } = await supabase
+            .from("messages")
+            .select("*")
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${user.id})`)
+            .order("created_at", { ascending: true });
+          if (chatMsgs) setChatMessages(chatMsgs);
+        } else {
+          // Fallback: fetch target profile details if not in conversation list yet
+          const { data: targetProf } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", chatPartnerId)
+            .single();
+          if (targetProf) {
+            setConversations((prev) => [...prev, targetProf]);
+            setSelectedChatPartner(targetProf);
+          }
+        }
+        setActiveTab("messages");
+      }
     }
 
     // 6. Fetch Services (posted by other freelancers)
@@ -1397,7 +1429,7 @@ export default function ClientDashboard() {
                     <tbody>
                       {payments.map((p, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
-                          <td style={{ padding: "10px 12px", fontWeight: "600" }}>{p.contract.job.title}</td>
+                          <td style={{ padding: "10px 12px", fontWeight: "600" }}>{p.contract.job?.title || p.contract.service?.title || "Direct Service Hire"}</td>
                           <td style={{ padding: "10px 12px" }}>@{p.receiver.screen_name} ({p.receiver.first_name} {p.receiver.last_name})</td>
                           <td style={{ padding: "10px 12px", color: "var(--error-color)", fontWeight: "700" }}>-${Number(p.amount).toFixed(2)}</td>
                           <td style={{ padding: "10px 12px" }}>{new Date(p.created_at).toLocaleString()}</td>
