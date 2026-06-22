@@ -14,11 +14,21 @@ export default function PublicProfilePage({ params }: PageProps) {
   const supabase = createClient();
   const { id: targetUserId } = use(params);
 
+  const handleGoBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [targetProfile, setTargetProfile] = useState<any>(null);
   const [targetSkills, setTargetSkills] = useState<string[]>([]);
+  const [targetServices, setTargetServices] = useState<any[]>([]);
+  const [targetJobs, setTargetJobs] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,6 +76,26 @@ export default function PublicProfilePage({ params }: PageProps) {
 
       const skillsList = skillsData ? skillsData.map((s) => s.skill_name) : [];
       setTargetSkills(skillsList);
+
+      // 4. Fetch services if freelancer
+      if (prof.is_freelancer) {
+        const { data: servicesData } = await supabase
+          .from("services")
+          .select("*")
+          .eq("freelancer_id", targetUserId)
+          .order("created_at", { ascending: false });
+        if (servicesData) setTargetServices(servicesData);
+      }
+
+      // 5. Fetch jobs if client
+      if (prof.is_client) {
+        const { data: jobsData } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("client_id", targetUserId)
+          .order("created_at", { ascending: false });
+        if (jobsData) setTargetJobs(jobsData);
+      }
 
       setIsLoading(false);
     };
@@ -121,6 +151,13 @@ export default function PublicProfilePage({ params }: PageProps) {
             Cala
           </Link>
           <nav className="nav-links">
+            <button 
+              onClick={handleGoBack} 
+              className="nav-link" 
+              style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+            >
+              ← Back
+            </button>
             {currentUserId ? (
               <Link href="/profile/view" className="nav-link">My Profile</Link>
             ) : (
@@ -192,7 +229,7 @@ export default function PublicProfilePage({ params }: PageProps) {
 
           {/* Freelancer skills */}
           {targetProfile.is_freelancer && (
-            <div>
+            <div style={{ marginBottom: "28px" }}>
               <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "8px" }}>Expert Skills</h4>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {targetSkills.map((skill, idx) => (
@@ -200,6 +237,72 @@ export default function PublicProfilePage({ params }: PageProps) {
                 ))}
                 {targetSkills.length === 0 && (
                   <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No skills listed.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Freelancer Posted Services */}
+          {targetProfile.is_freelancer && (
+            <div style={{ marginTop: "28px", borderTop: "1px solid var(--border-color)", paddingTop: "20px" }}>
+              <h4 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "16px" }}>Posted Services</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                {targetServices.map((service, idx) => (
+                  <div key={idx} style={{ padding: "16px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fafafa" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <span className="tag" style={{ fontSize: "11px", marginBottom: "6px" }}>{service.category}</span>
+                        <h5 style={{ fontSize: "15px", fontWeight: "700" }}>
+                          <Link href={`/services/${service.id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                            {service.title}
+                          </Link>
+                        </h5>
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                          Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <strong style={{ fontSize: "16px", color: "var(--primary-color)" }}>${Number(service.price).toFixed(2)}</strong>
+                    </div>
+                    <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "10px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.5" }}>
+                      {service.description}
+                    </p>
+                  </div>
+                ))}
+                {targetServices.length === 0 && (
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No posted services found.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Client Posted Jobs */}
+          {targetProfile.is_client && (
+            <div style={{ marginTop: "28px", borderTop: "1px solid var(--border-color)", paddingTop: "20px" }}>
+              <h4 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "16px" }}>Posted Jobs</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+                {targetJobs.map((job, idx) => (
+                  <div key={idx} style={{ padding: "16px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#fafafa" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <span className="tag" style={{ fontSize: "11px", marginBottom: "6px" }}>{job.category}</span>
+                        <h5 style={{ fontSize: "15px", fontWeight: "700" }}>
+                          <Link href={`/jobs/${job.id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                            {job.title}
+                          </Link>
+                        </h5>
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                          Status: <span style={{ fontWeight: "700", textTransform: "uppercase" }}>{job.status}</span>
+                        </p>
+                      </div>
+                      <strong style={{ fontSize: "16px", color: "var(--primary-color)" }}>${Number(job.budget).toFixed(2)}</strong>
+                    </div>
+                    <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "10px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.5" }}>
+                      {job.description}
+                    </p>
+                  </div>
+                ))}
+                {targetJobs.length === 0 && (
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>No posted jobs found.</p>
                 )}
               </div>
             </div>

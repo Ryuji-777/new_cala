@@ -664,7 +664,7 @@ export default function FreelancerDashboard() {
                         </Link>
                       </strong>
                       <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                        Client: @{app.job.client.screen_name} &bull; Budget: ${Number(app.job.budget).toFixed(2)}
+                        Client: <Link href={`/profile/${app.job.client_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{app.job.client?.first_name} {app.job.client?.last_name}</Link> (@{app.job.client.screen_name}) &bull; Budget: ${Number(app.job.budget).toFixed(2)}
                       </p>
                     </div>
                     <span className="tag" style={{ textTransform: "capitalize", fontWeight: "600" }}>
@@ -718,7 +718,7 @@ export default function FreelancerDashboard() {
                         </Link>
                       </h3>
                       <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                        Posted by: @{job.client.screen_name} &bull; Budget: ${Number(job.budget).toFixed(2)} &bull; Date: {new Date(job.created_at).toLocaleDateString()}
+                        Posted by: <Link href={`/profile/${job.client_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{job.client?.first_name} {job.client?.last_name}</Link> (@{job.client.screen_name}) &bull; Budget: ${Number(job.budget).toFixed(2)} &bull; Date: {new Date(job.created_at).toLocaleDateString()}
                       </p>
                       
                       <p style={{ fontSize: "14px", color: "#555", marginTop: "12px", lineHeight: "1.6" }}>
@@ -1020,7 +1020,7 @@ export default function FreelancerDashboard() {
                       )}
                     </h4>
                     <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      Client: @{c.client.screen_name} &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
+                      Client: <Link href={`/profile/${c.client_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{c.client?.first_name} {c.client?.last_name}</Link> (@{c.client.screen_name}) &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
                       <span style={{ fontWeight: "700", color: c.status === "completed" ? "var(--success-color)" : c.status === "ongoing" ? "var(--primary-color)" : "var(--error-color)" }}>
                         {c.status.toUpperCase()}
                       </span>

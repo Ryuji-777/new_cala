@@ -933,7 +933,7 @@ export default function ClientDashboard() {
                         </div>
                         <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>{service.title}</h3>
                         <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                          By: @{service.freelancer?.screen_name} ({service.freelancer?.first_name} {service.freelancer?.last_name})
+                          By: <Link href={`/profile/${service.freelancer_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{service.freelancer?.first_name} {service.freelancer?.last_name}</Link> (@{service.freelancer?.screen_name})
                         </p>
                         <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                           Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
@@ -1122,7 +1122,11 @@ export default function ClientDashboard() {
                           <div key={aIdx} style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", padding: "16px", marginBottom: "12px", display: "grid", gridTemplateColumns: "3fr 1fr", gap: "24px", alignItems: "center" }}>
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <strong style={{ fontSize: "14px" }}>{app.freelancer.first_name} {app.freelancer.last_name}</strong>
+                                <strong style={{ fontSize: "14px" }}>
+                                  <Link href={`/profile/${app.freelancer_id}`} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
+                                    {app.freelancer.first_name} {app.freelancer.last_name}
+                                  </Link>
+                                </strong>
                                 <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>@{app.freelancer.screen_name}</span>
                                 {app.freelancer.is_verified ? (
                                   <span style={{ fontSize: "10px", backgroundColor: "var(--success-bg)", color: "var(--success-color)", border: "1px solid var(--success-border)", padding: "1px 6px", borderRadius: "50px" }}>Verified</span>
@@ -1181,7 +1185,7 @@ export default function ClientDashboard() {
                       )}
                     </h4>
                     <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      Freelancer: @{c.freelancer.screen_name} &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
+                      Freelancer: <Link href={`/profile/${c.freelancer_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{c.freelancer?.first_name} {c.freelancer?.last_name}</Link> (@{c.freelancer.screen_name}) &bull; Budget: ${Number(c.budget).toFixed(2)} &bull; Status:{" "}
                       <span style={{ fontWeight: "700", color: c.status === "completed" ? "var(--success-color)" : c.status === "ongoing" ? "var(--primary-color)" : "var(--error-color)" }}>
                         {c.status.toUpperCase()}
                       </span>

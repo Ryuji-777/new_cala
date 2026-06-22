@@ -205,6 +205,14 @@ export default function ProfileViewPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const handleGoBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [userSkills, setUserSkills] = useState<string[]>([]);
@@ -590,15 +598,13 @@ export default function ProfileViewPage() {
             Cala
           </Link>
           <nav className="nav-links">
-            {(profile.is_admin || profile.is_super_admin) && (
-              <Link href="/admin/dashboard" className="nav-link">Admin Dashboard</Link>
-            )}
-            {profile.is_freelancer && (
-              <Link href="/freelancer/dashboard" className="nav-link">Freelancer Workspace</Link>
-            )}
-            {profile.is_client && (
-              <Link href="/client/dashboard" className="nav-link">Client Workspace</Link>
-            )}
+            <button 
+              onClick={handleGoBack} 
+              className="nav-link" 
+              style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+            >
+              ← Back
+            </button>
             <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
               Log Out
             </button>

@@ -106,7 +106,7 @@ export default function JobDetailPage({ params }: PageProps) {
     // 5. Fetch reviews left for this client
     const { data: reviewsData } = await supabase
       .from("reviews")
-      .select("*, reviewer:profiles(first_name, last_name, screen_name)")
+      .select("*, reviewer:profiles!reviewer_id(first_name, last_name, screen_name)")
       .eq("reviewee_id", cId);
     if (reviewsData && reviewsData.length > 0) {
       setReviews(reviewsData);

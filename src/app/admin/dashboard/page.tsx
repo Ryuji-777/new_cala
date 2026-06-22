@@ -334,6 +334,193 @@ export default function AdminDashboardPage() {
     loadDataLists();
   };
 
+  // Restore Archive Handler
+  const handleRestoreArchive = async (archive: any) => {
+    if (!currentAdminProfile || !isSuperAdmin) return;
+
+    setConfirmState({
+      message: `Are you sure you want to restore this archived ${archive.resource_type}?`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executeRestoreArchive(archive);
+      }
+    });
+  };
+
+  const executeRestoreArchive = async (archive: any) => {
+    try {
+      const data = typeof archive.data === "string" ? JSON.parse(archive.data) : archive.data;
+      let error = null;
+
+      if (archive.resource_type === "user") {
+        // Insert back into profiles
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert(data);
+        error = insertError;
+      } else if (archive.resource_type === "job") {
+        const { error: insertError } = await supabase
+          .from("jobs")
+          .insert(data);
+        error = insertError;
+      } else if (archive.resource_type === "skill") {
+        const { error: insertError } = await supabase
+          .from("freelancer_skills")
+          .insert(data);
+        error = insertError;
+      } else {
+        throw new Error(`Unsupported resource type: ${archive.resource_type}`);
+      }
+
+      if (error) {
+        let errorMsg = error.message;
+        if (error.code === "23503") {
+          if (archive.resource_type === "user") {
+            errorMsg = "Cannot restore this user because the corresponding auth account no longer exists in Supabase Auth.";
+          } else if (archive.resource_type === "job") {
+            errorMsg = "Cannot restore this job because the posting client profile no longer exists.";
+          } else if (archive.resource_type === "skill") {
+            errorMsg = "Cannot restore this skill because the corresponding freelancer profile no longer exists.";
+          }
+        }
+        setPopup({
+          message: `Failed to restore: ${errorMsg}`,
+          type: "error"
+        });
+        return;
+      }
+
+      // Delete from archives
+      const { error: deleteError } = await supabase
+        .from("archives")
+        .delete()
+        .eq("id", archive.id);
+
+      if (deleteError) {
+        setPopup({
+          message: `Restored successfully but failed to remove archive entry: ${deleteError.message}`,
+          type: "error"
+        });
+        return;
+      }
+
+      // Log action
+      await supabase.from("system_logs").insert({
+        actor_id: currentAdminProfile.id,
+        actor_email: currentAdminProfile.email,
+        action: "restore_archive",
+        details: {
+          archive_id: archive.id,
+          resource_type: archive.resource_type,
+          original_id: archive.original_id,
+          label: archive.resource_type === "user" ? data.email : archive.resource_type === "job" ? data.title : data.skill_name
+        },
+      });
+
+      setPopup({
+        message: `Successfully restored ${archive.resource_type}!`,
+        type: "success"
+      });
+
+      loadStats();
+      loadDataLists();
+    } catch (err: any) {
+      setPopup({
+        message: `Failed to restore: ${err.message}`,
+        type: "error"
+      });
+    }
+  };
+
+  // Permanent Delete Archive Handler
+  const handlePermanentDeleteArchive = async (archive: any) => {
+    if (!currentAdminProfile || !isSuperAdmin) return;
+
+    setConfirmState({
+      message: `Are you sure you want to PERMANENTLY delete this archived ${archive.resource_type}? This action cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        await executePermanentDeleteArchive(archive);
+      }
+    });
+  };
+
+  const executePermanentDeleteArchive = async (archive: any) => {
+    try {
+      const data = typeof archive.data === "string" ? JSON.parse(archive.data) : archive.data;
+      const { error: deleteError } = await supabase
+        .from("archives")
+        .delete()
+        .eq("id", archive.id);
+
+      if (deleteError) {
+        setPopup({
+          message: `Failed to delete archive entry: ${deleteError.message}`,
+          type: "error"
+        });
+        return;
+      }
+
+      // Log action
+      await supabase.from("system_logs").insert({
+        actor_id: currentAdminProfile.id,
+        actor_email: currentAdminProfile.email,
+        action: "permanent_delete_archive",
+        details: {
+          archive_id: archive.id,
+          resource_type: archive.resource_type,
+          original_id: archive.original_id,
+          label: archive.resource_type === "user" ? data.email : archive.resource_type === "job" ? data.title : data.skill_name
+        },
+      });
+
+      setPopup({
+        message: `Permanently deleted archived ${archive.resource_type}.`,
+        type: "success"
+      });
+
+      loadStats();
+      loadDataLists();
+    } catch (err: any) {
+      setPopup({
+        message: `Failed to delete: ${err.message}`,
+        type: "error"
+      });
+    }
+  };
+
+  // Format Archive Details for Premium Display
+  const renderArchiveDetails = (a: any) => {
+    try {
+      const data = typeof a.data === "string" ? JSON.parse(a.data) : a.data;
+      if (a.resource_type === "user") {
+        return (
+          <div>
+            <strong>{data.first_name} {data.last_name}</strong> (@{data.screen_name || "unset"})
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{data.email}</div>
+          </div>
+        );
+      } else if (a.resource_type === "job") {
+        return (
+          <div>
+            <strong>{data.title}</strong>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Budget: ${data.budget} &bull; {data.category}</div>
+          </div>
+        );
+      } else if (a.resource_type === "skill") {
+        return (
+          <div>
+            <strong>Skill: {data.skill_name}</strong>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Freelancer ID: {data.freelancer_id}</div>
+          </div>
+        );
+      }
+      return <pre style={{ fontSize: "11px", margin: 0 }}>{JSON.stringify(data)}</pre>;
+    } catch (e) {
+      return <pre style={{ fontSize: "11px", margin: 0 }}>{JSON.stringify(a.data)}</pre>;
+    }
+  };
+
   // Validate Add User field
   const validateForm = (name: string, value: string): string => {
     switch (name) {
@@ -484,6 +671,25 @@ export default function AdminDashboardPage() {
             </span>
             <Link href="/profile/view" className="nav-link">My Profile</Link>
             
+            {isSuperAdmin && (
+              <>
+                <button 
+                  onClick={() => setActiveTab("logs")} 
+                  className="nav-link" 
+                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer", fontWeight: activeTab === "logs" ? "700" : "500", color: activeTab === "logs" ? "var(--primary-color)" : "var(--text-secondary)" }}
+                >
+                  Audit Logs
+                </button>
+                <button 
+                  onClick={() => setActiveTab("archives")} 
+                  className="nav-link" 
+                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer", fontWeight: activeTab === "archives" ? "700" : "500", color: activeTab === "archives" ? "var(--primary-color)" : "var(--text-secondary)" }}
+                >
+                  Archives ({archives.length})
+                </button>
+              </>
+            )}
+            
             {/* Notifications Bell Dropdown */}
             <div className="notif-container">
               <button 
@@ -558,12 +764,26 @@ export default function AdminDashboardPage() {
               User Management
             </button>
             {isSuperAdmin && (
-              <button 
-                onClick={() => setActiveTab("super-admin")} 
-                style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "super-admin" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "super-admin" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
-              >
-                Super Admin Controls
-              </button>
+              <>
+                <button 
+                  onClick={() => setActiveTab("super-admin")} 
+                  style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "super-admin" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "super-admin" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+                >
+                  Admin Roles
+                </button>
+                <button 
+                  onClick={() => setActiveTab("logs")} 
+                  style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "logs" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "logs" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+                >
+                  Audit Logs
+                </button>
+                <button 
+                  onClick={() => setActiveTab("archives")} 
+                  style={{ padding: "12px 4px", fontSize: "14px", fontWeight: "600", color: activeTab === "archives" ? "var(--primary-color)" : "var(--text-secondary)", borderBottom: activeTab === "archives" ? "2px solid var(--primary-color)" : "none", background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", cursor: "pointer" }}
+                >
+                  Archives ({archives.length})
+                </button>
+              </>
             )}
           </div>
 
@@ -798,7 +1018,7 @@ export default function AdminDashboardPage() {
           {activeTab === "super-admin" && isSuperAdmin && (
             <div>
               {/* PROMOTE ADMIN */}
-              <div className="card" style={{ marginBottom: "32px" }}>
+              <div className="card">
                 <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px" }}>Add System Administrators</h3>
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "16px" }}>
                   Search for any user screen name or email to grant/revoke admin status.
@@ -837,71 +1057,102 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* AUDIT LOGS */}
-              <div className="card" style={{ marginBottom: "32px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px" }}>System Action & Audit Logs</h3>
-                <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                    <thead>
-                      <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
-                        <th style={{ padding: "8px 12px" }}>Admin Actor</th>
-                        <th style={{ padding: "8px 12px" }}>Action</th>
-                        <th style={{ padding: "8px 12px" }}>Details</th>
-                        <th style={{ padding: "8px 12px" }}>Date</th>
+          {/* TAB 5: AUDIT LOGS */}
+          {activeTab === "logs" && isSuperAdmin && (
+            <div className="card">
+              <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>System Action & Audit Logs</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                A full history of administrative and critical events performed on Cala.
+              </p>
+              <div style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
+                      <th style={{ padding: "12px 16px" }}>Admin Actor</th>
+                      <th style={{ padding: "12px 16px" }}>Action</th>
+                      <th style={{ padding: "12px 16px" }}>Details</th>
+                      <th style={{ padding: "12px 16px" }}>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {systemLogs.map((log, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: "600" }}>{log.actor_email}</td>
+                        <td style={{ padding: "12px 16px" }}><span className="tag">{log.action}</span></td>
+                        <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>{JSON.stringify(log.details)}</td>
+                        <td style={{ padding: "12px 16px" }}>{new Date(log.created_at).toLocaleString()}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {systemLogs.map((log, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
-                          <td style={{ padding: "8px 12px", fontWeight: "600" }}>{log.actor_email}</td>
-                          <td style={{ padding: "8px 12px" }}><span className="tag">{log.action}</span></td>
-                          <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{JSON.stringify(log.details)}</td>
-                          <td style={{ padding: "8px 12px" }}>{new Date(log.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                      {systemLogs.length === 0 && (
-                        <tr>
-                          <td colSpan={4} style={{ padding: "12px", textAlign: "center", color: "var(--text-secondary)" }}>No system logs available.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                    {systemLogs.length === 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>No system logs available.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
+            </div>
+          )}
 
-              {/* ARCHIVES */}
-              <div className="card">
-                <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "16px" }}>Archived Deleted Entities</h3>
-                <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", fontSize: "13px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                    <thead>
-                      <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
-                        <th style={{ padding: "8px 12px" }}>Type</th>
-                        <th style={{ padding: "8px 12px" }}>Original ID</th>
-                        <th style={{ padding: "8px 12px" }}>Deleted By</th>
-                        <th style={{ padding: "8px 12px" }}>Archive Details (JSON)</th>
-                        <th style={{ padding: "8px 12px" }}>Deleted Date</th>
+          {/* TAB 6: ARCHIVES */}
+          {activeTab === "archives" && isSuperAdmin && (
+            <div className="card">
+              <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Archived Deleted Entities</h3>
+              <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                Review, restore, or permanently delete items that have been archived.
+              </p>
+              <div style={{ border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid var(--border-color)" }}>
+                      <th style={{ padding: "12px 16px" }}>Type</th>
+                      <th style={{ padding: "12px 16px" }}>Original ID</th>
+                      <th style={{ padding: "12px 16px" }}>Deleted By</th>
+                      <th style={{ padding: "12px 16px" }}>Archive Details</th>
+                      <th style={{ padding: "12px 16px" }}>Deleted Date</th>
+                      <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archives.map((a, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: "600" }}><span className="tag">{a.resource_type}</span></td>
+                        <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{a.original_id.slice(0, 8)}...</td>
+                        <td style={{ padding: "12px 16px" }}>{a.deleted_by_email}</td>
+                        <td style={{ padding: "12px 16px", color: "var(--text-secondary)" }}>
+                          {renderArchiveDetails(a)}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>{new Date(a.deleted_at).toLocaleString()}</td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                            <button
+                              onClick={() => handleRestoreArchive(a)}
+                              className="btn btn-blue-outline"
+                              style={{ padding: "4px 8px", fontSize: "12px" }}
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handlePermanentDeleteArchive(a)}
+                              className="btn btn-outline"
+                              style={{ padding: "4px 8px", fontSize: "12px", color: "var(--error-color)", borderColor: "var(--error-border)" }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {archives.map((a, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid var(--border-color)" }}>
-                          <td style={{ padding: "8px 12px", fontWeight: "600" }}><span className="tag">{a.resource_type}</span></td>
-                          <td style={{ padding: "8px 12px" }}>{a.original_id}</td>
-                          <td style={{ padding: "8px 12px" }}>{a.deleted_by_email}</td>
-                          <td style={{ padding: "8px 12px", color: "var(--text-secondary)" }}>{JSON.stringify(a.data)}</td>
-                          <td style={{ padding: "8px 12px" }}>{new Date(a.deleted_at).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                      {archives.length === 0 && (
-                        <tr>
-                          <td colSpan={5} style={{ padding: "12px", textAlign: "center", color: "var(--text-secondary)" }}>No archived items found.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                    {archives.length === 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>No archived items found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
