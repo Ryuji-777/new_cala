@@ -58,42 +58,62 @@ export default function FreelancerDashboard() {
   const [postServiceError, setPostServiceError] = useState<string | null>(null);
 
   // Service Work Attachment States
-  const [serviceWorkFile, setServiceWorkFile] = useState<File | null>(null);
+  const [serviceWorkFiles, setServiceWorkFiles] = useState<File[]>([]);
   const [serviceWorkDesc, setServiceWorkDesc] = useState("");
   const [serviceWorkFileError, setServiceWorkFileError] = useState<string | null>(null);
-  const [serviceWorkFilePreview, setServiceWorkFilePreview] = useState<string | null>(null);
-
-  const validateServiceWorkFile = (file: File): string => {
-    const validExtensions = ["png", "jpg", "jpeg"];
-    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-    if (!validExtensions.includes(fileExt)) {
-      return "Invalid file type. Only PNG and JPG images are allowed.";
-    }
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return "File is too large. Maximum size allowed is 5MB.";
-    }
-    return "";
-  };
+  const [serviceWorkFilePreviews, setServiceWorkFilePreviews] = useState<string[]>([]);
 
   const handleServiceWorkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setServiceWorkFileError(null);
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const errorMsg = validateServiceWorkFile(file);
-      if (errorMsg) {
-        setServiceWorkFileError(errorMsg);
-        setServiceWorkFile(null);
-        setServiceWorkFilePreview(null);
-        e.target.value = ""; // Reset the input value
-        alert("Validation Error: " + errorMsg); // Immediate visibility
-      } else {
-        setServiceWorkFile(file);
-        setServiceWorkFilePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) {
+        setServiceWorkFiles([]);
+        setServiceWorkFilePreviews([]);
+        return;
       }
+      
+      if (files.length > 4) {
+        const err = "You can only upload up to 4 images for a service posting.";
+        setServiceWorkFileError(err);
+        setServiceWorkFiles([]);
+        setServiceWorkFilePreviews([]);
+        e.target.value = "";
+        alert("Validation Error: " + err);
+        return;
+      }
+
+      const validExtensions = ["png", "jpg", "jpeg"];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      for (const file of files) {
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+        if (!validExtensions.includes(fileExt)) {
+          const err = `Invalid file type for "${file.name}". Only PNG and JPG images are allowed.`;
+          setServiceWorkFileError(err);
+          setServiceWorkFiles([]);
+          setServiceWorkFilePreviews([]);
+          e.target.value = "";
+          alert("Validation Error: " + err);
+          return;
+        }
+        if (file.size > maxSize) {
+          const err = `File "${file.name}" is too large. Maximum size allowed is 5MB.`;
+          setServiceWorkFileError(err);
+          setServiceWorkFiles([]);
+          setServiceWorkFilePreviews([]);
+          e.target.value = "";
+          alert("Validation Error: " + err);
+          return;
+        }
+      }
+
+      // All files are valid
+      setServiceWorkFiles(files);
+      setServiceWorkFilePreviews(files.map((file) => URL.createObjectURL(file)));
     } else {
-      setServiceWorkFile(null);
-      setServiceWorkFilePreview(null);
+      setServiceWorkFiles([]);
+      setServiceWorkFilePreviews([]);
     }
   };
   
@@ -361,6 +381,20 @@ export default function FreelancerDashboard() {
     setServiceValidatedFields(allValidated);
 
     if (Object.keys(serviceErrors).length > 0 || serviceWorkFileError) return;
+    
+    if (serviceWorkFiles.length === 0) {
+      const err = "Please upload at least 1 image (minimum 1, maximum 4 images required).";
+      setServiceWorkFileError(err);
+      alert("Validation Error: " + err);
+      return;
+    }
+    if (serviceWorkFiles.length > 4) {
+      const err = "You can only upload up to 4 images.";
+      setServiceWorkFileError(err);
+      alert("Validation Error: " + err);
+      return;
+    }
+
     if (!profile) return;
 
     if (!profile.is_verified) {
@@ -384,20 +418,21 @@ export default function FreelancerDashboard() {
     if (serviceError || !newService) {
       setPostServiceError("Failed to offer service: " + (serviceError?.message || "Insertion error"));
     } else {
-      // If work sample is selected, upload it
-      if (serviceWorkFile) {
+      // Upload multiple work samples
+      for (let i = 0; i < serviceWorkFiles.length; i++) {
+        const file = serviceWorkFiles[i];
         try {
-          const fileExt = serviceWorkFile.name.split(".").pop();
-          const fileName = `${profile.id}/service-works-${Date.now()}.${fileExt}`;
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${profile.id}/service-works-${Date.now()}-${i}.${fileExt}`;
           let publicUrl = "";
           const { error: uploadError } = await supabase.storage
             .from("attachments")
-            .upload(fileName, serviceWorkFile, { cacheControl: "3600", upsert: true });
+            .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
           if (uploadError) {
             console.warn("Service work upload failed, checking bucket:", uploadError.message);
             if (uploadError.message.includes("Bucket not found")) {
-              publicUrl = `https://picsum.photos/seed/service-work-${Date.now()}/600/400`;
+              publicUrl = `https://picsum.photos/seed/service-work-${Date.now()}-${i}/600/400`;
             } else {
               throw uploadError;
             }
@@ -414,7 +449,7 @@ export default function FreelancerDashboard() {
               .insert({
                 service_id: newService.id,
                 image_url: publicUrl,
-                description: serviceWorkDesc.trim() || "Work sample deliverable image.",
+                description: serviceWorkDesc.trim() || `Work sample ${i + 1} image.`,
               });
           }
         } catch (uploadErr) {
@@ -424,8 +459,8 @@ export default function FreelancerDashboard() {
             .from("service_works")
             .insert({
               service_id: newService.id,
-              image_url: `https://picsum.photos/seed/service-work-${Date.now()}/600/400`,
-              description: serviceWorkDesc.trim() || "Work sample deliverable image.",
+              image_url: `https://picsum.photos/seed/service-work-${Date.now()}-${i}/600/400`,
+              description: serviceWorkDesc.trim() || `Work sample ${i + 1} image.`,
             });
         }
       }
@@ -439,9 +474,9 @@ export default function FreelancerDashboard() {
       setServicePrice("");
       setServiceDeliveryDays("");
       setServiceCategory("Programming & Development");
-      setServiceWorkFile(null);
+      setServiceWorkFiles([]);
       setServiceWorkDesc("");
-      setServiceWorkFilePreview(null);
+      setServiceWorkFilePreviews([]);
       setServiceWorkFileError(null);
       setServiceValidatedFields({});
       setShowPostServiceModal(false);
@@ -1096,27 +1131,34 @@ export default function FreelancerDashboard() {
                         </div>
                       </div>
 
-                      {/* Optional Work Sample Attachment */}
+                      {/* Work Sample Attachment */}
                       <div className="form-group" style={{ border: "1px solid var(--border-color)", padding: "16px", borderRadius: "var(--radius-sm)", backgroundColor: "#f8fafc", marginTop: "16px" }}>
-                        <label className="form-label">Attach Work Sample / Showcase (Optional)</label>
+                        <label className="form-label">Attach Work Samples (1-4 images required)</label>
                         <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                          Add a PNG or JPG sample of your work to show clients what to expect (max 5MB).
+                          Include 1 to 4 images showing your work (max 5MB each, PNG or JPG only).
                         </p>
                         
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                          {serviceWorkFilePreview && (
-                            <img 
-                              src={serviceWorkFilePreview} 
-                              alt="Work Preview" 
-                              style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
-                            />
-                          )}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "12px" }}>
                           <input
                             type="file"
                             accept="image/png, image/jpeg, image/jpg"
+                            multiple
                             style={{ fontSize: "14px" }}
                             onChange={handleServiceWorkFileChange}
                           />
+                          
+                          {serviceWorkFilePreviews.length > 0 && (
+                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                              {serviceWorkFilePreviews.map((preview, index) => (
+                                <img 
+                                  key={index} 
+                                  src={preview} 
+                                  alt={`Preview ${index + 1}`} 
+                                  style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover", border: "1px solid var(--border-color)" }} 
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
                         {serviceWorkFileError && (
                           <span className="form-error" style={{ display: "block", marginBottom: "12px" }}>{serviceWorkFileError}</span>
@@ -1129,7 +1171,7 @@ export default function FreelancerDashboard() {
                           style={{ minHeight: "80px", width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "var(--radius-sm)", outline: "none", fontSize: "13px" }}
                           value={serviceWorkDesc}
                           onChange={(e) => setServiceWorkDesc(e.target.value)}
-                          placeholder="Briefly describe this sample work (e.g. E-commerce design created for a retail client)..."
+                          placeholder="Briefly describe these sample works (e.g. E-commerce design created for a retail client)..."
                         />
                       </div>
 
@@ -1143,9 +1185,9 @@ export default function FreelancerDashboard() {
                             setServicePrice("");
                             setServiceDeliveryDays("");
                             setServiceCategory("Programming & Development");
-                            setServiceWorkFile(null);
+                            setServiceWorkFiles([]);
                             setServiceWorkDesc("");
-                            setServiceWorkFilePreview(null);
+                            setServiceWorkFilePreviews([]);
                             setServiceWorkFileError(null);
                             setServiceValidatedFields({});
                             setPostServiceError(null);

@@ -84,58 +84,7 @@ export default function ClientDashboard() {
   const [jobSkills, setJobSkills] = useState<string[]>([]);
   const [postError, setPostError] = useState<string | null>(null);
 
-  // Job images upload state
-  const [jobImages, setJobImages] = useState<File[]>([]);
-  const [jobImagesPreviews, setJobImagesPreviews] = useState<string[]>([]);
-  const [jobImagesError, setJobImagesError] = useState<string | null>(null);
 
-  const handleJobImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setJobImagesError(null);
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      if (files.length > 4) {
-        const err = "You can only upload up to 4 images for a job.";
-        setJobImagesError(err);
-        setJobImages([]);
-        setJobImagesPreviews([]);
-        e.target.value = "";
-        alert("Validation Error: " + err);
-        return;
-      }
-      
-      const validExtensions = ["png", "jpg", "jpeg"];
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      
-      for (const file of files) {
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-        if (!validExtensions.includes(fileExt)) {
-          const err = `Invalid file type for "${file.name}". Only PNG and JPG images are allowed.`;
-          setJobImagesError(err);
-          setJobImages([]);
-          setJobImagesPreviews([]);
-          e.target.value = "";
-          alert("Validation Error: " + err);
-          return;
-        }
-        if (file.size > maxSize) {
-          const err = `File "${file.name}" is too large. Maximum size allowed is 5MB.`;
-          setJobImagesError(err);
-          setJobImages([]);
-          setJobImagesPreviews([]);
-          e.target.value = "";
-          alert("Validation Error: " + err);
-          return;
-        }
-      }
-      
-      // All files are valid
-      setJobImages(files);
-      setJobImagesPreviews(files.map((file) => URL.createObjectURL(file)));
-    } else {
-      setJobImages([]);
-      setJobImagesPreviews([]);
-    }
-  };
 
   // Form Validation states
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -419,7 +368,7 @@ export default function ClientDashboard() {
     const allValidated = { jobTitle: true, jobDescription: true, jobBudget: true };
     setValidatedFields(allValidated);
 
-    if (Object.keys(errors).length > 0 || jobImagesError) return;
+    if (Object.keys(errors).length > 0) return;
     if (!profile) return;
 
     // Check verification status requirement
@@ -452,45 +401,6 @@ export default function ClientDashboard() {
     if (error || !newJob) {
       setPostError("Failed to post job: " + (error?.message || "Insertion error"));
     } else {
-      // If there are job images, upload them
-      let uploadedUrls: string[] = [];
-      if (jobImages.length > 0) {
-        for (let i = 0; i < jobImages.length; i++) {
-          const file = jobImages[i];
-          const fileExt = file.name.split(".").pop();
-          const fileName = `jobs/${newJob.id}/image-${i}-${Date.now()}.${fileExt}`;
-          try {
-            const { error: uploadError } = await supabase.storage
-              .from("attachments")
-              .upload(fileName, file, { cacheControl: "3600", upsert: true });
-
-            if (uploadError) {
-              console.warn("Job image upload failed, checking bucket status:", uploadError.message);
-              if (uploadError.message.includes("Bucket not found")) {
-                uploadedUrls.push(`https://picsum.photos/seed/job-${newJob.id}-${i}/600/400`);
-              } else {
-                console.error("Job image upload error:", uploadError.message);
-              }
-            } else {
-              const { data: { publicUrl } } = supabase.storage
-                .from("attachments")
-                .getPublicUrl(fileName);
-              uploadedUrls.push(publicUrl);
-            }
-          } catch (err) {
-            console.error("Job image upload exception, falling back to mock:", err);
-            uploadedUrls.push(`https://picsum.photos/seed/job-${newJob.id}-${i}/600/400`);
-          }
-        }
-
-        if (uploadedUrls.length > 0) {
-          await supabase
-            .from("jobs")
-            .update({ image_urls: uploadedUrls })
-            .eq("id", newJob.id);
-        }
-      }
-
       setPopup({
         message: "Job posted successfully!",
         type: "success"
@@ -500,9 +410,6 @@ export default function ClientDashboard() {
       setJobDescription("");
       setJobBudget("");
       setJobSkills([]);
-      setJobImages([]);
-      setJobImagesPreviews([]);
-      setJobImagesError(null);
       setValidatedFields({});
       setActiveTab("manage-jobs");
       loadClientData();
@@ -1209,40 +1116,7 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Project Images (1-4 images) */}
-                <div className="form-group" style={{ border: "1px solid var(--border-color)", padding: "16px", borderRadius: "var(--radius-sm)", backgroundColor: "#f8fafc", marginTop: "16px" }}>
-                  <label className="form-label">Project Images (1-4 images, Optional)</label>
-                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "12px" }}>
-                    Include up to 4 screenshots or diagrams (max 5MB each, PNG or JPG only).
-                  </p>
-                  
-                  <div style={{ marginBottom: "12px" }}>
-                    <input
-                      type="file"
-                      accept="image/png, image/jpeg, image/jpg"
-                      multiple
-                      style={{ fontSize: "14px" }}
-                      onChange={handleJobImagesChange}
-                    />
-                  </div>
-                  
-                  {jobImagesError && (
-                    <span className="form-error" style={{ display: "block", marginBottom: "12px" }}>{jobImagesError}</span>
-                  )}
-                  
-                  {jobImagesPreviews.length > 0 && (
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
-                      {jobImagesPreviews.map((preview, index) => (
-                        <img 
-                          key={index} 
-                          src={preview} 
-                          alt={`Preview ${index + 1}`} 
-                          style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover", border: "1px solid var(--border-color)" }} 
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+
 
                 <button 
                   type="submit" 

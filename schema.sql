@@ -314,3 +314,22 @@ CREATE TABLE IF NOT EXISTS public.reports (
 
 -- Disable row level security for reports table
 ALTER TABLE IF EXISTS public.reports DISABLE ROW LEVEL SECURITY;
+
+-- Enable RLS and add public access policies for portfolio_items (resiliency against client/auth RLS limits)
+ALTER TABLE IF EXISTS public.portfolio_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read on portfolio_items" ON public.portfolio_items;
+CREATE POLICY "Allow public read on portfolio_items" ON public.portfolio_items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on portfolio_items" ON public.portfolio_items;
+CREATE POLICY "Allow public insert on portfolio_items" ON public.portfolio_items FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public delete on portfolio_items" ON public.portfolio_items;
+CREATE POLICY "Allow public delete on portfolio_items" ON public.portfolio_items FOR DELETE USING (true);
+
+-- Enable RLS and add public access policies for service_works (resiliency against client/auth RLS limits)
+ALTER TABLE IF EXISTS public.service_works ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read on service_works" ON public.service_works;
+CREATE POLICY "Allow public read on service_works" ON public.service_works FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on service_works" ON public.service_works;
+CREATE POLICY "Allow public insert on service_works" ON public.service_works FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public delete on service_works" ON public.service_works;
+CREATE POLICY "Allow public delete on service_works" ON public.service_works FOR DELETE USING (true);
+

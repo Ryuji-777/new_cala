@@ -239,10 +239,10 @@ export default function ProfileViewPage() {
 
   // Portfolio States
   const [portfolio, setPortfolio] = useState<any[]>([]);
-  const [newPortfolioFile, setNewPortfolioFile] = useState<File | null>(null);
+  const [newPortfolioFiles, setNewPortfolioFiles] = useState<File[]>([]);
   const [newPortfolioDesc, setNewPortfolioDesc] = useState("");
   const [newPortfolioError, setNewPortfolioError] = useState<string | null>(null);
-  const [newPortfolioPreview, setNewPortfolioPreview] = useState<string | null>(null);
+  const [newPortfolioPreviews, setNewPortfolioPreviews] = useState<string[]>([]);
   const [showAddPortfolioModal, setShowAddPortfolioModal] = useState(false);
   const [isSubmittingPortfolio, setIsSubmittingPortfolio] = useState(false);
 
@@ -282,22 +282,55 @@ export default function ProfileViewPage() {
 
   const handlePortfolioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewPortfolioError(null);
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const errorMsg = validateImageFile(file);
-      if (errorMsg) {
-        setNewPortfolioError(errorMsg);
-        setNewPortfolioFile(null);
-        setNewPortfolioPreview(null);
-        e.target.value = ""; // Reset the input value
-        alert("Validation Error: " + errorMsg); // Immediate visibility
-      } else {
-        setNewPortfolioFile(file);
-        setNewPortfolioPreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) {
+        setNewPortfolioFiles([]);
+        setNewPortfolioPreviews([]);
+        return;
       }
+
+      if (files.length > 4) {
+        const err = "You can only upload up to 4 images for a portfolio item.";
+        setNewPortfolioError(err);
+        setNewPortfolioFiles([]);
+        setNewPortfolioPreviews([]);
+        e.target.value = "";
+        alert("Validation Error: " + err);
+        return;
+      }
+
+      const validExtensions = ["png", "jpg", "jpeg"];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      for (const file of files) {
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+        if (!validExtensions.includes(fileExt)) {
+          const err = `Invalid file type for "${file.name}". Only PNG and JPG images are allowed.`;
+          setNewPortfolioError(err);
+          setNewPortfolioFiles([]);
+          setNewPortfolioPreviews([]);
+          e.target.value = "";
+          alert("Validation Error: " + err);
+          return;
+        }
+        if (file.size > maxSize) {
+          const err = `File "${file.name}" is too large. Maximum size allowed is 5MB.`;
+          setNewPortfolioError(err);
+          setNewPortfolioFiles([]);
+          setNewPortfolioPreviews([]);
+          e.target.value = "";
+          alert("Validation Error: " + err);
+          return;
+        }
+      }
+
+      // All files are valid
+      setNewPortfolioFiles(files);
+      setNewPortfolioPreviews(files.map((file) => URL.createObjectURL(file)));
     } else {
-      setNewPortfolioFile(null);
-      setNewPortfolioPreview(null);
+      setNewPortfolioFiles([]);
+      setNewPortfolioPreviews([]);
     }
   };
 
@@ -679,8 +712,16 @@ export default function ProfileViewPage() {
     e.preventDefault();
     setNewPortfolioError(null);
 
-    if (!newPortfolioFile) {
-      setNewPortfolioError("Please select a portfolio image.");
+    if (newPortfolioFiles.length === 0) {
+      const err = "Please upload at least 1 image (minimum 1, maximum 4 images required).";
+      setNewPortfolioError(err);
+      alert("Validation Error: " + err);
+      return;
+    }
+    if (newPortfolioFiles.length > 4) {
+      const err = "You can only upload up to 4 images.";
+      setNewPortfolioError(err);
+      alert("Validation Error: " + err);
       return;
     }
     if (!newPortfolioDesc.trim()) {
@@ -691,41 +732,47 @@ export default function ProfileViewPage() {
     setIsSubmittingPortfolio(true);
 
     try {
-      const fileExt = newPortfolioFile.name.split(".").pop();
-      const fileName = `${profile.id}/portfolio-${Date.now()}.${fileExt}`;
-      let publicUrl = "";
-      try {
-        const { error: uploadError } = await supabase.storage
-          .from("attachments")
-          .upload(fileName, newPortfolioFile, { cacheControl: "3600", upsert: true });
-
-        if (uploadError) {
-          console.warn("Portfolio upload failed, checking bucket status:", uploadError.message);
-          if (uploadError.message.includes("Bucket not found")) {
-            publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}/600/400`;
-          } else {
-            setNewPortfolioError("Upload failed: " + uploadError.message);
-            setIsSubmittingPortfolio(false);
-            return;
-          }
-        } else {
-          const { data: { publicUrl: url } } = supabase.storage
+      const inserts = [];
+      for (let i = 0; i < newPortfolioFiles.length; i++) {
+        const file = newPortfolioFiles[i];
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${profile.id}/portfolio-${Date.now()}-${i}.${fileExt}`;
+        let publicUrl = "";
+        try {
+          const { error: uploadError } = await supabase.storage
             .from("attachments")
-            .getPublicUrl(fileName);
-          publicUrl = url;
-        }
-      } catch (err) {
-        console.warn("Portfolio upload exception, falling back to mock:", err);
-        publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}/600/400`;
-      }
+            .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
-      const { error: dbError } = await supabase
-        .from("portfolio_items")
-        .insert({
+          if (uploadError) {
+            console.warn("Portfolio upload failed, checking bucket status:", uploadError.message);
+            if (uploadError.message.includes("Bucket not found")) {
+              publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}-${i}/600/400`;
+            } else {
+              setNewPortfolioError("Upload failed: " + uploadError.message);
+              setIsSubmittingPortfolio(false);
+              return;
+            }
+          } else {
+            const { data: { publicUrl: url } } = supabase.storage
+              .from("attachments")
+              .getPublicUrl(fileName);
+            publicUrl = url;
+          }
+        } catch (err) {
+          console.warn("Portfolio upload exception, falling back to mock:", err);
+          publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}-${i}/600/400`;
+        }
+
+        inserts.push({
           freelancer_id: profile.id,
           image_url: publicUrl,
           description: newPortfolioDesc.trim(),
         });
+      }
+
+      const { error: dbError } = await supabase
+        .from("portfolio_items")
+        .insert(inserts);
 
       if (dbError) {
         setNewPortfolioError("Failed to save portfolio details: " + dbError.message);
@@ -734,9 +781,9 @@ export default function ProfileViewPage() {
           message: "Portfolio item added successfully!",
           type: "success"
         });
-        setNewPortfolioFile(null);
+        setNewPortfolioFiles([]);
         setNewPortfolioDesc("");
-        setNewPortfolioPreview(null);
+        setNewPortfolioPreviews([]);
         setShowAddPortfolioModal(false);
         fetchProfileData();
       }
@@ -1338,21 +1385,27 @@ export default function ProfileViewPage() {
 
             <form onSubmit={handleAddPortfolioItem}>
               <div className="form-group">
-                <label className="form-label">Portfolio Image</label>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
-                  {newPortfolioPreview && (
-                    <img 
-                      src={newPortfolioPreview} 
-                      alt="Portfolio Preview" 
-                      style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
-                    />
-                  )}
+                <label className="form-label">Portfolio Images (1-4 images required)</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "8px" }}>
                   <input
                     type="file"
                     accept="image/png, image/jpeg, image/jpg"
+                    multiple
                     onChange={handlePortfolioFileChange}
-                    required
                   />
+                  
+                  {newPortfolioPreviews.length > 0 && (
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {newPortfolioPreviews.map((preview, index) => (
+                        <img 
+                          key={index} 
+                          src={preview} 
+                          alt={`Preview ${index + 1}`} 
+                          style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover", border: "1px solid var(--border-color)" }} 
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1373,8 +1426,8 @@ export default function ProfileViewPage() {
                   type="button" 
                   onClick={() => {
                     setShowAddPortfolioModal(false);
-                    setNewPortfolioFile(null);
-                    setNewPortfolioPreview(null);
+                    setNewPortfolioFiles([]);
+                    setNewPortfolioPreviews([]);
                     setNewPortfolioDesc("");
                     setNewPortfolioError(null);
                   }} 

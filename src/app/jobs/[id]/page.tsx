@@ -417,19 +417,6 @@ export default function JobDetailPage({ params }: PageProps) {
                     {job.description}
                   </p>
                 </div>
-
-                {job.image_urls && job.image_urls.length > 0 && (
-                  <div style={{ marginBottom: "32px" }}>
-                    <h4 style={{ fontSize: "13px", fontWeight: "700", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Project Images</h4>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
-                      {job.image_urls.map((img: string, idx: number) => (
-                        <a key={idx} href={img} target="_blank" rel="noopener noreferrer" style={{ display: "block", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
-                          <img src={img} alt={`Job Image ${idx + 1}`} style={{ width: "100%", height: "90px", objectFit: "cover" }} />
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Actions and Triggers */}
