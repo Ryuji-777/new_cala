@@ -671,25 +671,6 @@ export default function AdminDashboardPage() {
             </span>
             <Link href="/profile/view" className="nav-link">My Profile</Link>
             
-            {isSuperAdmin && (
-              <>
-                <button 
-                  onClick={() => setActiveTab("logs")} 
-                  className="nav-link" 
-                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer", fontWeight: activeTab === "logs" ? "700" : "500", color: activeTab === "logs" ? "var(--primary-color)" : "var(--text-secondary)" }}
-                >
-                  Audit Logs
-                </button>
-                <button 
-                  onClick={() => setActiveTab("archives")} 
-                  className="nav-link" 
-                  style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer", fontWeight: activeTab === "archives" ? "700" : "500", color: activeTab === "archives" ? "var(--primary-color)" : "var(--text-secondary)" }}
-                >
-                  Archives ({archives.length})
-                </button>
-              </>
-            )}
-            
             {/* Notifications Bell Dropdown */}
             <div className="notif-container">
               <button 
@@ -697,7 +678,9 @@ export default function AdminDashboardPage() {
                 className="notif-bell-btn"
                 title="Notifications"
               >
-                🔔
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "20px", height: "20px" }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
                 {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
               </button>
 
