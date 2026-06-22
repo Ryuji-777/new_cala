@@ -318,7 +318,7 @@ export default function ProfileSetupPage() {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/login");
+        router.replace("/login");
       } else {
         setUserId(user.id);
       }
@@ -576,7 +576,7 @@ export default function ProfileSetupPage() {
       }
 
       // Redirect to a landing profile info page
-      router.push("/profile/view");
+      router.replace("/profile/view");
       router.refresh();
     } catch (err: any) {
       setSubmitError("An unexpected error occurred while saving. Please try again.");

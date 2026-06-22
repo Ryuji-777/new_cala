@@ -419,6 +419,9 @@ export default function FreelancerDashboard() {
       setPostServiceError("Failed to offer service: " + (serviceError?.message || "Insertion error"));
     } else {
       // Upload multiple work samples
+      let uploadFailed = false;
+      let uploadErrorMessage = "";
+
       for (let i = 0; i < serviceWorkFiles.length; i++) {
         const file = serviceWorkFiles[i];
         try {
@@ -430,18 +433,13 @@ export default function FreelancerDashboard() {
             .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
           if (uploadError) {
-            console.warn("Service work upload failed, checking bucket:", uploadError.message);
-            if (uploadError.message.includes("Bucket not found")) {
-              publicUrl = `https://picsum.photos/seed/service-work-${Date.now()}-${i}/600/400`;
-            } else {
-              throw uploadError;
-            }
-          } else {
-            const { data: { publicUrl: url } } = supabase.storage
-              .from("attachments")
-              .getPublicUrl(fileName);
-            publicUrl = url;
+            throw uploadError;
           }
+
+          const { data: { publicUrl: url } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(fileName);
+          publicUrl = url;
 
           if (publicUrl) {
             await supabase
@@ -452,17 +450,17 @@ export default function FreelancerDashboard() {
                 description: serviceWorkDesc.trim() || `Work sample ${i + 1} image.`,
               });
           }
-        } catch (uploadErr) {
-          console.error("Failed to upload service work sample, using fallback:", uploadErr);
-          // Safe fallback insertion
-          await supabase
-            .from("service_works")
-            .insert({
-              service_id: newService.id,
-              image_url: `https://picsum.photos/seed/service-work-${Date.now()}-${i}/600/400`,
-              description: serviceWorkDesc.trim() || `Work sample ${i + 1} image.`,
-            });
+        } catch (uploadErr: any) {
+          uploadFailed = true;
+          uploadErrorMessage = uploadErr?.message || String(uploadErr);
+          break;
         }
+      }
+
+      if (uploadFailed) {
+        await supabase.from("services").delete().eq("id", newService.id);
+        setPostServiceError(`Failed to upload images: ${uploadErrorMessage}. Please ensure the public 'attachments' storage bucket is created in Supabase.`);
+        return;
       }
 
       setPopup({

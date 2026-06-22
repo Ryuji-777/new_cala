@@ -733,6 +733,9 @@ export default function ProfileViewPage() {
 
     try {
       const inserts = [];
+      let uploadFailed = false;
+      let uploadErrorMessage = "";
+
       for (let i = 0; i < newPortfolioFiles.length; i++) {
         const file = newPortfolioFiles[i];
         const fileExt = file.name.split(".").pop();
@@ -744,23 +747,17 @@ export default function ProfileViewPage() {
             .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
           if (uploadError) {
-            console.warn("Portfolio upload failed, checking bucket status:", uploadError.message);
-            if (uploadError.message.includes("Bucket not found")) {
-              publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}-${i}/600/400`;
-            } else {
-              setNewPortfolioError("Upload failed: " + uploadError.message);
-              setIsSubmittingPortfolio(false);
-              return;
-            }
-          } else {
-            const { data: { publicUrl: url } } = supabase.storage
-              .from("attachments")
-              .getPublicUrl(fileName);
-            publicUrl = url;
+            throw uploadError;
           }
-        } catch (err) {
-          console.warn("Portfolio upload exception, falling back to mock:", err);
-          publicUrl = `https://picsum.photos/seed/portfolio-${Date.now()}-${i}/600/400`;
+
+          const { data: { publicUrl: url } } = supabase.storage
+            .from("attachments")
+            .getPublicUrl(fileName);
+          publicUrl = url;
+        } catch (err: any) {
+          uploadFailed = true;
+          uploadErrorMessage = err?.message || String(err);
+          break;
         }
 
         inserts.push({
@@ -768,6 +765,12 @@ export default function ProfileViewPage() {
           image_url: publicUrl,
           description: newPortfolioDesc.trim(),
         });
+      }
+
+      if (uploadFailed) {
+        setNewPortfolioError(`Failed to upload images: ${uploadErrorMessage}. Please ensure the public 'attachments' storage bucket is created in Supabase.`);
+        setIsSubmittingPortfolio(false);
+        return;
       }
 
       const { error: dbError } = await supabase

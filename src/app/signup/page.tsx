@@ -28,6 +28,36 @@ export default function SignupPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Show/Hide Password State
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Redirect logged-in users away from the signup page
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("screen_name, is_freelancer, is_client, is_admin, is_super_admin")
+          .eq("id", user.id)
+          .single();
+
+        if (!profileData || !profileData.screen_name) {
+          router.replace("/profile/setup");
+        } else if (profileData.is_admin || profileData.is_super_admin) {
+          router.replace("/admin/dashboard");
+        } else {
+          if (profileData.is_freelancer) {
+            router.replace("/freelancer/dashboard");
+          } else {
+            router.replace("/client/dashboard");
+          }
+        }
+      }
+    };
+    checkActiveSession();
+  }, [supabase, router]);
+
   // Validation Logic
   const validateField = (name: string, value: any): string => {
     switch (name) {
@@ -288,17 +318,48 @@ export default function SignupPage() {
             {/* Password Field */}
             <div className="form-group">
               <label className="form-label" htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                className={getInputClass("password")}
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                onFocus={handleFocus}
-                required
-              />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  className={getInputClass("password")}
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  onFocus={handleFocus}
+                  style={{ width: "100%", paddingRight: "40px" }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4px"
+                  }}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {validatedFields.password && errors.password && (
                 <span className="form-error">{errors.password}</span>
               )}
