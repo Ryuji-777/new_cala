@@ -8,6 +8,169 @@ import { createBrowserClient } from "@supabase/ssr";
 import Popup from "@/components/Popup";
 import ConfirmPopup from "@/components/ConfirmPopup";
 
+const countriesData = [
+  {
+    name: "Philippines",
+    states: [
+      "Metro Manila",
+      "Calabarzon",
+      "Central Luzon",
+      "Central Visayas",
+      "Western Visayas",
+      "Davao Region",
+      "Northern Mindanao",
+      "Bicol Region",
+      "Ilocos Region",
+      "Cagayan Valley",
+      "Mimaropa",
+      "Eastern Visayas",
+      "Zamboanga Peninsula",
+      "Soccsksargen",
+      "Caraga",
+      "Cordillera Administrative Region",
+      "BARMM"
+    ]
+  },
+  {
+    name: "Singapore",
+    states: [
+      "Central Region",
+      "East Region",
+      "North Region",
+      "North-East Region",
+      "West Region"
+    ]
+  },
+  {
+    name: "Japan",
+    states: [
+      "Tokyo",
+      "Osaka",
+      "Kyoto",
+      "Hokkaido",
+      "Fukuoka",
+      "Aichi",
+      "Kanagawa",
+      "Okinawa",
+      "Chiba",
+      "Saitama"
+    ]
+  },
+  {
+    name: "South Korea",
+    states: [
+      "Seoul",
+      "Busan",
+      "Incheon",
+      "Daegu",
+      "Daejeon",
+      "Gwangju",
+      "Ulsan",
+      "Gyeonggi",
+      "Gangwon",
+      "Jeju"
+    ]
+  },
+  {
+    name: "India",
+    states: [
+      "Andhra Pradesh",
+      "Arunachal Pradesh",
+      "Assam",
+      "Bihar",
+      "Chhattisgarh",
+      "Goa",
+      "Gujarat",
+      "Haryana",
+      "Himachal Pradesh",
+      "Jharkhand",
+      "Karnataka",
+      "Kerala",
+      "Madhya Pradesh",
+      "Maharashtra",
+      "Manipur",
+      "Meghalaya",
+      "Mizoram",
+      "Nagaland",
+      "Odisha",
+      "Punjab",
+      "Rajasthan",
+      "Sikkim",
+      "Tamil Nadu",
+      "Telangana",
+      "Tripura",
+      "Uttar Pradesh",
+      "Uttarakhand",
+      "West Bengal",
+      "Delhi",
+      "Noida"
+    ]
+  },
+  {
+    name: "Malaysia",
+    states: [
+      "Kuala Lumpur",
+      "Selangor",
+      "Penang",
+      "Johor",
+      "Sabah",
+      "Sarawak",
+      "Perak",
+      "Pahang",
+      "Melaka",
+      "Kedah"
+    ]
+  },
+  {
+    name: "Thailand",
+    states: [
+      "Bangkok",
+      "Chiang Mai",
+      "Phuket",
+      "Chonburi",
+      "Nonthaburi",
+      "Nakhon Ratchasima"
+    ]
+  },
+  {
+    name: "Indonesia",
+    states: [
+      "Jakarta",
+      "West Java",
+      "Central Java",
+      "East Java",
+      "Bali",
+      "Yogyakarta",
+      "Banten",
+      "North Sumatra"
+    ]
+  },
+  {
+    name: "Vietnam",
+    states: [
+      "Hanoi",
+      "Ho Chi Minh City",
+      "Da Nang",
+      "Hai Phong",
+      "Can Tho",
+      "Binh Duong"
+    ]
+  },
+  {
+    name: "China",
+    states: [
+      "Beijing",
+      "Shanghai",
+      "Guangdong",
+      "Zhejiang",
+      "Jiangsu",
+      "Sichuan",
+      "Fujian",
+      "Hubei"
+    ]
+  }
+];
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -61,11 +224,25 @@ export default function AdminDashboardPage() {
     lastName: "",
     email: "",
     password: "",
+    contactNumber: "",
+    city: "",
+    zip: "",
   });
   const [adminFormErrors, setAdminFormErrors] = useState<Record<string, string>>({});
   const [adminFormActiveField, setAdminFormActiveField] = useState<string | null>(null);
   const [adminFormValidated, setAdminFormValidated] = useState<Record<string, boolean>>({});
   const [newAdminError, setNewAdminError] = useState<string | null>(null);
+
+  // Searchable Location Selectors for new Admin
+  const [adminCountryQuery, setAdminCountryQuery] = useState("");
+  const [adminSelectedCountry, setAdminSelectedCountry] = useState<string | null>(null);
+  const [isAdminCountryOpen, setIsAdminCountryOpen] = useState(false);
+  const adminCountryRef = React.useRef<HTMLDivElement>(null);
+
+  const [adminStateQuery, setAdminStateQuery] = useState("");
+  const [adminSelectedState, setAdminSelectedState] = useState<string | null>(null);
+  const [isAdminStateOpen, setIsAdminStateOpen] = useState(false);
+  const adminStateRef = React.useRef<HTMLDivElement>(null);
 
   // Promote admin search query
   const [promoteSearch, setPromoteSearch] = useState("");
@@ -642,6 +819,22 @@ export default function AdminDashboardPage() {
         if (!value) return "Password is required.";
         if (value.length < 8) return "Password must be at least 8 characters.";
         return "";
+      case "contactNumber":
+        if (!value.trim()) return "Contact number is required.";
+        if (!/^\+?[0-9\s-]{7,15}$/.test(value)) return "Please enter a valid contact number.";
+        return "";
+      case "city":
+        if (!value.trim()) return "City is required.";
+        return "";
+      case "zip":
+        if (!value.trim()) return "ZIP / Postal code is required.";
+        return "";
+      case "country":
+        if (!value.trim()) return "Country is required.";
+        return "";
+      case "state":
+        if (!value.trim()) return "State / Region is required.";
+        return "";
       default:
         return "";
     }
@@ -668,8 +861,29 @@ export default function AdminDashboardPage() {
       const errorMsg = validateForm(key, val);
       if (errorMsg) newErrors[key] = errorMsg;
     });
+    const countryError = validateForm("country", adminSelectedCountry || "");
+    if (countryError) newErrors["country"] = countryError;
+    const stateError = validateForm("state", adminSelectedState || "");
+    if (stateError) newErrors["state"] = stateError;
+
     setAdminFormErrors(newErrors);
-  }, [newAdminForm]);
+  }, [newAdminForm, adminSelectedCountry, adminSelectedState]);
+
+  // Click outside to close admin dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (adminCountryRef.current && !adminCountryRef.current.contains(event.target as Node)) {
+        setIsAdminCountryOpen(false);
+      }
+      if (adminStateRef.current && !adminStateRef.current.contains(event.target as Node)) {
+        setIsAdminStateOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const getAdminFormInputClass = (name: string) => {
     const base = "form-input";
@@ -679,6 +893,18 @@ export default function AdminDashboardPage() {
     }
     return base;
   };
+
+  const adminFilteredCountries = countriesData.filter((c) =>
+    c.name.toLowerCase().includes(adminCountryQuery.toLowerCase())
+  );
+
+  const adminAvailableStates = adminSelectedCountry
+    ? countriesData.find((c) => c.name === adminSelectedCountry)?.states || []
+    : [];
+
+  const adminFilteredStates = adminAvailableStates.filter((s) =>
+    s.toLowerCase().includes(adminStateQuery.toLowerCase())
+  );
 
   const getFormInputClass = (name: string) => {
     const base = "form-input";
@@ -763,10 +989,25 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setNewAdminError(null);
 
-    const allValidated = { firstName: true, lastName: true, email: true, password: true };
+    const allValidated = { 
+      firstName: true, 
+      lastName: true, 
+      email: true, 
+      password: true,
+      contactNumber: true,
+      city: true,
+      zip: true,
+      country: true,
+      state: true
+    };
     setAdminFormValidated(allValidated);
 
-    if (Object.keys(adminFormErrors).length > 0) return;
+    if (Object.keys(adminFormErrors).length > 0 || !adminSelectedCountry || !adminSelectedState) {
+      if (!adminSelectedCountry || !adminSelectedState) {
+        setNewAdminError("Please select a valid Country and State / Region.");
+      }
+      return;
+    }
 
     try {
       const tempSupabase = createBrowserClient(
@@ -803,6 +1044,11 @@ export default function AdminDashboardPage() {
             is_verified: true,
             screen_name: `admin_${Math.floor(Math.random() * 100000)}`,
             description: "System Administrator account.",
+            contact_number: newAdminForm.contactNumber,
+            country: adminSelectedCountry,
+            state: adminSelectedState,
+            city: newAdminForm.city,
+            zip: newAdminForm.zip,
           })
           .eq("id", signUpData.user.id);
 
@@ -825,7 +1071,11 @@ export default function AdminDashboardPage() {
           type: "success"
         });
         setShowAddAdminModal(false);
-        setNewAdminForm({ firstName: "", lastName: "", email: "", password: "" });
+        setNewAdminForm({ firstName: "", lastName: "", email: "", password: "", contactNumber: "", city: "", zip: "" });
+        setAdminSelectedCountry(null);
+        setAdminSelectedState(null);
+        setAdminCountryQuery("");
+        setAdminStateQuery("");
         setAdminFormValidated({});
         loadStats();
         loadDataLists();
@@ -1358,6 +1608,173 @@ export default function AdminDashboardPage() {
                         {adminFormValidated.password && adminFormErrors.password && (
                           <span className="form-error">{adminFormErrors.password}</span>
                         )}
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Contact Number</label>
+                        <input
+                          type="text"
+                          value={newAdminForm.contactNumber}
+                          className={getAdminFormInputClass("contactNumber")}
+                          onChange={(e) => setNewAdminForm({ ...newAdminForm, contactNumber: e.target.value })}
+                          onFocus={() => setAdminFormActiveField("contactNumber")}
+                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, contactNumber: true })); }}
+                          placeholder="e.g. +639123456789"
+                          required
+                        />
+                        {adminFormValidated.contactNumber && adminFormErrors.contactNumber && (
+                          <span className="form-error">{adminFormErrors.contactNumber}</span>
+                        )}
+                      </div>
+
+                      {/* Searchable Location Selectors */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                        
+                        {/* Searchable Country Selector */}
+                        <div className="form-group" ref={adminCountryRef} style={{ position: "relative" }}>
+                          <label className="form-label">Country</label>
+                          <input
+                            type="text"
+                            className={getAdminFormInputClass("country")}
+                            value={adminCountryQuery}
+                            placeholder={adminSelectedCountry || "Type to search..."}
+                            onFocus={() => {
+                              setIsAdminCountryOpen(true);
+                              setAdminFormActiveField("country");
+                            }}
+                            onBlur={() => {
+                              setAdminFormActiveField(null);
+                              setTimeout(() => setAdminFormValidated(prev => ({ ...prev, country: true })), 150);
+                            }}
+                            onChange={(e) => {
+                              setAdminCountryQuery(e.target.value);
+                              setIsAdminCountryOpen(true);
+                            }}
+                            required
+                          />
+                          {isAdminCountryOpen && (
+                            <ul style={{ 
+                              position: "absolute", top: "100%", left: 0, right: 0, 
+                              backgroundColor: "#fff", border: "1px solid var(--border-color)", 
+                              maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
+                              padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
+                              boxShadow: "var(--shadow-md)"
+                            }}>
+                              {adminFilteredCountries.map((c, idx) => (
+                                <li 
+                                  key={idx}
+                                  onClick={() => {
+                                    setAdminSelectedCountry(c.name);
+                                    setAdminCountryQuery(c.name);
+                                    setAdminSelectedState(null);
+                                    setAdminStateQuery("");
+                                    setIsAdminCountryOpen(false);
+                                  }}
+                                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                >
+                                  {c.name}
+                                </li>
+                              ))}
+                              {adminFilteredCountries.length === 0 && (
+                                <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
+                              )}
+                            </ul>
+                          )}
+                          {adminFormValidated.country && adminFormErrors.country && (
+                            <span className="form-error">{adminFormErrors.country}</span>
+                          )}
+                        </div>
+
+                        {/* Searchable State Selector */}
+                        <div className="form-group" ref={adminStateRef} style={{ position: "relative" }}>
+                          <label className="form-label">State / Region</label>
+                          <input
+                            type="text"
+                            className={getAdminFormInputClass("state")}
+                            value={adminStateQuery}
+                            placeholder={adminSelectedState || "Type to search..."}
+                            disabled={!adminSelectedCountry}
+                            onFocus={() => {
+                              setIsAdminStateOpen(true);
+                              setAdminFormActiveField("state");
+                            }}
+                            onBlur={() => {
+                              setAdminFormActiveField(null);
+                              setTimeout(() => setAdminFormValidated(prev => ({ ...prev, state: true })), 150);
+                            }}
+                            onChange={(e) => {
+                              setAdminStateQuery(e.target.value);
+                              setIsAdminStateOpen(true);
+                            }}
+                            required
+                          />
+                          {isAdminStateOpen && adminSelectedCountry && (
+                            <ul style={{ 
+                              position: "absolute", top: "100%", left: 0, right: 0, 
+                              backgroundColor: "#fff", border: "1px solid var(--border-color)", 
+                              maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
+                              padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
+                              boxShadow: "var(--shadow-md)"
+                            }}>
+                              {adminFilteredStates.map((s, idx) => (
+                                <li 
+                                  key={idx}
+                                  onClick={() => {
+                                    setAdminSelectedState(s);
+                                    setAdminStateQuery(s);
+                                    setIsAdminStateOpen(false);
+                                  }}
+                                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                >
+                                  {s}
+                                </li>
+                              ))}
+                              {adminFilteredStates.length === 0 && (
+                                <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
+                              )}
+                            </ul>
+                          )}
+                          {adminFormValidated.state && adminFormErrors.state && (
+                            <span className="form-error">{adminFormErrors.state}</span>
+                          )}
+                        </div>
+
+                      </div>
+
+                      {/* City & Zip row */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                        <div className="form-group">
+                          <label className="form-label">City</label>
+                          <input
+                            type="text"
+                            value={newAdminForm.city}
+                            className={getAdminFormInputClass("city")}
+                            onChange={(e) => setNewAdminForm({ ...newAdminForm, city: e.target.value })}
+                            onFocus={() => setAdminFormActiveField("city")}
+                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, city: true })); }}
+                            required
+                          />
+                          {adminFormValidated.city && adminFormErrors.city && (
+                            <span className="form-error">{adminFormErrors.city}</span>
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">ZIP / Postal Code</label>
+                          <input
+                            type="text"
+                            value={newAdminForm.zip}
+                            className={getAdminFormInputClass("zip")}
+                            onChange={(e) => setNewAdminForm({ ...newAdminForm, zip: e.target.value })}
+                            onFocus={() => setAdminFormActiveField("zip")}
+                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, zip: true })); }}
+                            required
+                          />
+                          {adminFormValidated.zip && adminFormErrors.zip && (
+                            <span className="form-error">{adminFormErrors.zip}</span>
+                          )}
+                        </div>
                       </div>
 
                       <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>

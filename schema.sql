@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     zip TEXT,
     avatar_url TEXT,
     id_attachment_url TEXT,
+    contact_number TEXT,
     is_verified BOOLEAN DEFAULT FALSE, -- Admin must approve the attached ID
     is_freelancer BOOLEAN DEFAULT FALSE,
     is_client BOOLEAN DEFAULT FALSE,
