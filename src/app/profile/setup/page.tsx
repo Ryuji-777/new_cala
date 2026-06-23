@@ -583,8 +583,12 @@ export default function ProfileSetupPage() {
         }
       }
 
-      // Redirect to a landing profile info page
-      router.replace("/profile/view");
+      // Redirect to their appropriate workspace/dashboard instead of profile view
+      if (isFreelancer) {
+        router.replace("/freelancer/dashboard");
+      } else {
+        router.replace("/client/dashboard");
+      }
       router.refresh();
     } catch (err: any) {
       setSubmitError("An unexpected error occurred while saving. Please try again.");
