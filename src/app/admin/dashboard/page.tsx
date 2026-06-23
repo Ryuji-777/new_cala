@@ -1432,359 +1432,6 @@ export default function AdminDashboardPage() {
                 </table>
               </div>
 
-              {/* ADD USER MODAL */}
-              {showAddUserModal && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
-                  <div className="card" style={{ width: "100%", maxWidth: "450px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Add New Account</h3>
-                    
-                    {newUserError && (
-                      <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
-                        {newUserError}
-                      </div>
-                    )}
-
-                    <form onSubmit={handleAddUser} noValidate>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                        <div className="form-group">
-                          <label className="form-label">First Name</label>
-                          <input
-                            type="text"
-                            value={newUserForm.firstName}
-                            className={getFormInputClass("firstName")}
-                            onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })}
-                            onFocus={() => setFormActiveField("firstName")}
-                            onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, firstName: true })); }}
-                            required
-                          />
-                          {formValidated.firstName && formErrors.firstName && (
-                            <span className="form-error">{formErrors.firstName}</span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Last Name</label>
-                          <input
-                            type="text"
-                            value={newUserForm.lastName}
-                            className={getFormInputClass("lastName")}
-                            onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })}
-                            onFocus={() => setFormActiveField("lastName")}
-                            onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, lastName: true })); }}
-                            required
-                          />
-                          {formValidated.lastName && formErrors.lastName && (
-                            <span className="form-error">{formErrors.lastName}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Email</label>
-                        <input
-                          type="email"
-                          value={newUserForm.email}
-                          className={getFormInputClass("email")}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                          onFocus={() => setFormActiveField("email")}
-                          onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, email: true })); }}
-                          required
-                        />
-                        {formValidated.email && formErrors.email && (
-                          <span className="form-error">{formErrors.email}</span>
-                        )}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Password</label>
-                        <input
-                          type="password"
-                          value={newUserForm.password}
-                          className={getFormInputClass("password")}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                          onFocus={() => setFormActiveField("password")}
-                          onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, password: true })); }}
-                          required
-                        />
-                        {formValidated.password && formErrors.password && (
-                          <span className="form-error">{formErrors.password}</span>
-                        )}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Role Type</label>
-                        <select 
-                          value={newUserForm.role}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
-                          style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid #cbd5e1" }}
-                        >
-                          <option value="freelancer">Freelancer Mode</option>
-                          <option value="client">Client Mode</option>
-                          <option value="both">Both Freelancer & Client</option>
-                        </select>
-                      </div>
-
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
-                        <button type="button" onClick={() => setShowAddUserModal(false)} className="btn btn-outline">Cancel</button>
-                        <button type="submit" className="btn btn-primary">Create User</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {/* ADD ADMIN MODAL */}
-              {showAddAdminModal && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
-                  <div className="card" style={{ width: "100%", maxWidth: "450px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
-                    <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Create New Administrator</h3>
-                    
-                    {newAdminError && (
-                      <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
-                        {newAdminError}
-                      </div>
-                    )}
-
-                    <form onSubmit={handleAddAdmin} noValidate>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                        <div className="form-group">
-                          <label className="form-label">First Name</label>
-                          <input
-                            type="text"
-                            value={newAdminForm.firstName}
-                            className={getAdminFormInputClass("firstName")}
-                            onChange={(e) => setNewAdminForm({ ...newAdminForm, firstName: e.target.value })}
-                            onFocus={() => setAdminFormActiveField("firstName")}
-                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, firstName: true })); }}
-                            required
-                          />
-                          {adminFormValidated.firstName && adminFormErrors.firstName && (
-                            <span className="form-error">{adminFormErrors.firstName}</span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">Last Name</label>
-                          <input
-                            type="text"
-                            value={newAdminForm.lastName}
-                            className={getAdminFormInputClass("lastName")}
-                            onChange={(e) => setNewAdminForm({ ...newAdminForm, lastName: e.target.value })}
-                            onFocus={() => setAdminFormActiveField("lastName")}
-                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, lastName: true })); }}
-                            required
-                          />
-                          {adminFormValidated.lastName && adminFormErrors.lastName && (
-                            <span className="form-error">{adminFormErrors.lastName}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Email</label>
-                        <input
-                          type="email"
-                          value={newAdminForm.email}
-                          className={getAdminFormInputClass("email")}
-                          onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
-                          onFocus={() => setAdminFormActiveField("email")}
-                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, email: true })); }}
-                          required
-                        />
-                        {adminFormValidated.email && adminFormErrors.email && (
-                          <span className="form-error">{adminFormErrors.email}</span>
-                        )}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Password</label>
-                        <input
-                          type="password"
-                          value={newAdminForm.password}
-                          className={getAdminFormInputClass("password")}
-                          onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
-                          onFocus={() => setAdminFormActiveField("password")}
-                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, password: true })); }}
-                          required
-                        />
-                        {adminFormValidated.password && adminFormErrors.password && (
-                          <span className="form-error">{adminFormErrors.password}</span>
-                        )}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Contact Number</label>
-                        <input
-                          type="text"
-                          value={newAdminForm.contactNumber}
-                          className={getAdminFormInputClass("contactNumber")}
-                          onChange={(e) => setNewAdminForm({ ...newAdminForm, contactNumber: e.target.value })}
-                          onFocus={() => setAdminFormActiveField("contactNumber")}
-                          onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, contactNumber: true })); }}
-                          placeholder="e.g. +639123456789"
-                          required
-                        />
-                        {adminFormValidated.contactNumber && adminFormErrors.contactNumber && (
-                          <span className="form-error">{adminFormErrors.contactNumber}</span>
-                        )}
-                      </div>
-
-                      {/* Searchable Location Selectors */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
-                        
-                        {/* Searchable Country Selector */}
-                        <div className="form-group" ref={adminCountryRef} style={{ position: "relative" }}>
-                          <label className="form-label">Country</label>
-                          <input
-                            type="text"
-                            className={getAdminFormInputClass("country")}
-                            value={adminCountryQuery}
-                            placeholder={adminSelectedCountry || "Type to search..."}
-                            onFocus={() => {
-                              setIsAdminCountryOpen(true);
-                              setAdminFormActiveField("country");
-                            }}
-                            onBlur={() => {
-                              setAdminFormActiveField(null);
-                              setTimeout(() => setAdminFormValidated(prev => ({ ...prev, country: true })), 150);
-                            }}
-                            onChange={(e) => {
-                              setAdminCountryQuery(e.target.value);
-                              setIsAdminCountryOpen(true);
-                            }}
-                            required
-                          />
-                          {isAdminCountryOpen && (
-                            <ul style={{ 
-                              position: "absolute", top: "100%", left: 0, right: 0, 
-                              backgroundColor: "#fff", border: "1px solid var(--border-color)", 
-                              maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
-                              padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
-                              boxShadow: "var(--shadow-md)"
-                            }}>
-                              {adminFilteredCountries.map((c, idx) => (
-                                <li 
-                                  key={idx}
-                                  onClick={() => {
-                                    setAdminSelectedCountry(c.name);
-                                    setAdminCountryQuery(c.name);
-                                    setAdminSelectedState(null);
-                                    setAdminStateQuery("");
-                                    setIsAdminCountryOpen(false);
-                                  }}
-                                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                >
-                                  {c.name}
-                                </li>
-                              ))}
-                              {adminFilteredCountries.length === 0 && (
-                                <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
-                              )}
-                            </ul>
-                          )}
-                          {adminFormValidated.country && adminFormErrors.country && (
-                            <span className="form-error">{adminFormErrors.country}</span>
-                          )}
-                        </div>
-
-                        {/* Searchable State Selector */}
-                        <div className="form-group" ref={adminStateRef} style={{ position: "relative" }}>
-                          <label className="form-label">State / Region</label>
-                          <input
-                            type="text"
-                            className={getAdminFormInputClass("state")}
-                            value={adminStateQuery}
-                            placeholder={adminSelectedState || "Type to search..."}
-                            disabled={!adminSelectedCountry}
-                            onFocus={() => {
-                              setIsAdminStateOpen(true);
-                              setAdminFormActiveField("state");
-                            }}
-                            onBlur={() => {
-                              setAdminFormActiveField(null);
-                              setTimeout(() => setAdminFormValidated(prev => ({ ...prev, state: true })), 150);
-                            }}
-                            onChange={(e) => {
-                              setAdminStateQuery(e.target.value);
-                              setIsAdminStateOpen(true);
-                            }}
-                            required
-                          />
-                          {isAdminStateOpen && adminSelectedCountry && (
-                            <ul style={{ 
-                              position: "absolute", top: "100%", left: 0, right: 0, 
-                              backgroundColor: "#fff", border: "1px solid var(--border-color)", 
-                              maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
-                              padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
-                              boxShadow: "var(--shadow-md)"
-                            }}>
-                              {adminFilteredStates.map((s, idx) => (
-                                <li 
-                                  key={idx}
-                                  onClick={() => {
-                                    setAdminSelectedState(s);
-                                    setAdminStateQuery(s);
-                                    setIsAdminStateOpen(false);
-                                  }}
-                                  style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
-                                  onMouseDown={(e) => e.preventDefault()}
-                                >
-                                  {s}
-                                </li>
-                              ))}
-                              {adminFilteredStates.length === 0 && (
-                                <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
-                              )}
-                            </ul>
-                          )}
-                          {adminFormValidated.state && adminFormErrors.state && (
-                            <span className="form-error">{adminFormErrors.state}</span>
-                          )}
-                        </div>
-
-                      </div>
-
-                      {/* City & Zip row */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
-                        <div className="form-group">
-                          <label className="form-label">City</label>
-                          <input
-                            type="text"
-                            value={newAdminForm.city}
-                            className={getAdminFormInputClass("city")}
-                            onChange={(e) => setNewAdminForm({ ...newAdminForm, city: e.target.value })}
-                            onFocus={() => setAdminFormActiveField("city")}
-                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, city: true })); }}
-                            required
-                          />
-                          {adminFormValidated.city && adminFormErrors.city && (
-                            <span className="form-error">{adminFormErrors.city}</span>
-                          )}
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">ZIP / Postal Code</label>
-                          <input
-                            type="text"
-                            value={newAdminForm.zip}
-                            className={getAdminFormInputClass("zip")}
-                            onChange={(e) => setNewAdminForm({ ...newAdminForm, zip: e.target.value })}
-                            onFocus={() => setAdminFormActiveField("zip")}
-                            onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, zip: true })); }}
-                            required
-                          />
-                          {adminFormValidated.zip && adminFormErrors.zip && (
-                            <span className="form-error">{adminFormErrors.zip}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
-                        <button type="button" onClick={() => setShowAddAdminModal(false)} className="btn btn-outline">Cancel</button>
-                        <button type="submit" className="btn btn-primary">Create Admin</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -2123,6 +1770,360 @@ export default function AdminDashboardPage() {
           <p>&copy; {new Date().getFullYear()} Cala Freelance Marketplace. Admin Portal.</p>
         </div>
       </footer>
+
+      {/* ADD USER MODAL */}
+      {showAddUserModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+          <div className="card" style={{ width: "100%", maxWidth: "450px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Add New Account</h3>
+            
+            {newUserError && (
+              <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                {newUserError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddUser} noValidate>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="form-group">
+                  <label className="form-label">First Name</label>
+                  <input
+                    type="text"
+                    value={newUserForm.firstName}
+                    className={getFormInputClass("firstName")}
+                    onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })}
+                    onFocus={() => setFormActiveField("firstName")}
+                    onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, firstName: true })); }}
+                    required
+                  />
+                  {formValidated.firstName && formErrors.firstName && (
+                    <span className="form-error">{formErrors.firstName}</span>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    value={newUserForm.lastName}
+                    className={getFormInputClass("lastName")}
+                    onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })}
+                    onFocus={() => setFormActiveField("lastName")}
+                    onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, lastName: true })); }}
+                    required
+                  />
+                  {formValidated.lastName && formErrors.lastName && (
+                    <span className="form-error">{formErrors.lastName}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  value={newUserForm.email}
+                  className={getFormInputClass("email")}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                  onFocus={() => setFormActiveField("email")}
+                  onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, email: true })); }}
+                  required
+                />
+                {formValidated.email && formErrors.email && (
+                  <span className="form-error">{formErrors.email}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  value={newUserForm.password}
+                  className={getFormInputClass("password")}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                  onFocus={() => setFormActiveField("password")}
+                  onBlur={() => { setFormActiveField(null); setFormValidated(p => ({ ...p, password: true })); }}
+                  required
+                />
+                {formValidated.password && formErrors.password && (
+                  <span className="form-error">{formErrors.password}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Role Type</label>
+                <select 
+                  value={newUserForm.role}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid #cbd5e1" }}
+                >
+                  <option value="freelancer">Freelancer Mode</option>
+                  <option value="client">Client Mode</option>
+                  <option value="both">Both Freelancer & Client</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button type="button" onClick={() => setShowAddUserModal(false)} className="btn btn-outline">Cancel</button>
+                <button type="submit" className="btn btn-primary">Create User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD ADMIN MODAL */}
+      {showAddAdminModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 200 }}>
+          <div className="card" style={{ width: "100%", maxWidth: "450px", backgroundColor: "#fff", padding: "32px", borderRadius: "var(--radius-md)" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "16px" }}>Create New Administrator</h3>
+            
+            {newAdminError && (
+              <div style={{ backgroundColor: "var(--error-bg)", color: "var(--error-color)", padding: "10px", fontSize: "13px", borderRadius: "var(--radius-sm)", marginBottom: "12px" }}>
+                {newAdminError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddAdmin} noValidate>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="form-group">
+                  <label className="form-label">First Name</label>
+                  <input
+                    type="text"
+                    value={newAdminForm.firstName}
+                    className={getAdminFormInputClass("firstName")}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, firstName: e.target.value })}
+                    onFocus={() => setAdminFormActiveField("firstName")}
+                    onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, firstName: true })); }}
+                    required
+                  />
+                  {adminFormValidated.firstName && adminFormErrors.firstName && (
+                    <span className="form-error">{adminFormErrors.firstName}</span>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    value={newAdminForm.lastName}
+                    className={getAdminFormInputClass("lastName")}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, lastName: e.target.value })}
+                    onFocus={() => setAdminFormActiveField("lastName")}
+                    onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, lastName: true })); }}
+                    required
+                  />
+                  {adminFormValidated.lastName && adminFormErrors.lastName && (
+                    <span className="form-error">{adminFormErrors.lastName}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  value={newAdminForm.email}
+                  className={getAdminFormInputClass("email")}
+                  onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
+                  onFocus={() => setAdminFormActiveField("email")}
+                  onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, email: true })); }}
+                  required
+                />
+                {adminFormValidated.email && adminFormErrors.email && (
+                  <span className="form-error">{adminFormErrors.email}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  value={newAdminForm.password}
+                  className={getAdminFormInputClass("password")}
+                  onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
+                  onFocus={() => setAdminFormActiveField("password")}
+                  onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, password: true })); }}
+                  required
+                />
+                {adminFormValidated.password && adminFormErrors.password && (
+                  <span className="form-error">{adminFormErrors.password}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Contact Number</label>
+                <input
+                  type="text"
+                  value={newAdminForm.contactNumber}
+                  className={getAdminFormInputClass("contactNumber")}
+                  onChange={(e) => setNewAdminForm({ ...newAdminForm, contactNumber: e.target.value })}
+                  onFocus={() => setAdminFormActiveField("contactNumber")}
+                  onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, contactNumber: true })); }}
+                  placeholder="e.g. +639123456789"
+                  required
+                />
+                {adminFormValidated.contactNumber && adminFormErrors.contactNumber && (
+                  <span className="form-error">{adminFormErrors.contactNumber}</span>
+                )}
+              </div>
+
+              {/* Searchable Location Selectors */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                
+                {/* Searchable Country Selector */}
+                <div className="form-group" ref={adminCountryRef} style={{ position: "relative" }}>
+                  <label className="form-label">Country</label>
+                  <input
+                    type="text"
+                    className={getAdminFormInputClass("country")}
+                    value={adminCountryQuery}
+                    placeholder={adminSelectedCountry || "Type to search..."}
+                    onFocus={() => {
+                      setIsAdminCountryOpen(true);
+                      setAdminFormActiveField("country");
+                    }}
+                    onBlur={() => {
+                      setAdminFormActiveField(null);
+                      setTimeout(() => setAdminFormValidated(prev => ({ ...prev, country: true })), 150);
+                    }}
+                    onChange={(e) => {
+                      setAdminCountryQuery(e.target.value);
+                      setIsAdminCountryOpen(true);
+                    }}
+                    required
+                  />
+                  {isAdminCountryOpen && (
+                    <ul style={{ 
+                      position: "absolute", top: "100%", left: 0, right: 0, 
+                      backgroundColor: "#fff", border: "1px solid var(--border-color)", 
+                      maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
+                      padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
+                      boxShadow: "var(--shadow-md)"
+                    }}>
+                      {adminFilteredCountries.map((c, idx) => (
+                        <li 
+                          key={idx}
+                          onClick={() => {
+                            setAdminSelectedCountry(c.name);
+                            setAdminCountryQuery(c.name);
+                            setAdminSelectedState(null);
+                            setAdminStateQuery("");
+                            setIsAdminCountryOpen(false);
+                          }}
+                          style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
+                          onMouseDown={(e) => e.preventDefault()}
+                        >
+                          {c.name}
+                        </li>
+                      ))}
+                      {adminFilteredCountries.length === 0 && (
+                        <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
+                      )}
+                    </ul>
+                  )}
+                  {adminFormValidated.country && adminFormErrors.country && (
+                    <span className="form-error">{adminFormErrors.country}</span>
+                  )}
+                </div>
+
+                {/* Searchable State Selector */}
+                <div className="form-group" ref={adminStateRef} style={{ position: "relative" }}>
+                  <label className="form-label">State / Region</label>
+                  <input
+                    type="text"
+                    className={getAdminFormInputClass("state")}
+                    value={adminStateQuery}
+                    placeholder={adminSelectedState || "Type to search..."}
+                    disabled={!adminSelectedCountry}
+                    onFocus={() => {
+                      setIsAdminStateOpen(true);
+                      setAdminFormActiveField("state");
+                    }}
+                    onBlur={() => {
+                      setAdminFormActiveField(null);
+                      setTimeout(() => setAdminFormValidated(prev => ({ ...prev, state: true })), 150);
+                    }}
+                    onChange={(e) => {
+                      setAdminStateQuery(e.target.value);
+                      setIsAdminStateOpen(true);
+                    }}
+                    required
+                  />
+                  {isAdminStateOpen && adminSelectedCountry && (
+                    <ul style={{ 
+                      position: "absolute", top: "100%", left: 0, right: 0, 
+                      backgroundColor: "#fff", border: "1px solid var(--border-color)", 
+                      maxHeight: "120px", overflowY: "auto", zIndex: 210, listStyle: "none", 
+                      padding: 0, margin: 0, borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
+                      boxShadow: "var(--shadow-md)"
+                    }}>
+                      {adminFilteredStates.map((s, idx) => (
+                        <li 
+                          key={idx}
+                          onClick={() => {
+                            setAdminSelectedState(s);
+                            setAdminStateQuery(s);
+                            setIsAdminStateOpen(false);
+                          }}
+                          style={{ padding: "8px 12px", cursor: "pointer", fontSize: "13px", borderBottom: "1px solid #f1f5f9" }}
+                          onMouseDown={(e) => e.preventDefault()}
+                        >
+                          {s}
+                        </li>
+                      ))}
+                      {adminFilteredStates.length === 0 && (
+                        <li style={{ padding: "8px 12px", color: "var(--text-secondary)", fontSize: "13px" }}>No results</li>
+                      )}
+                    </ul>
+                  )}
+                  {adminFormValidated.state && adminFormErrors.state && (
+                    <span className="form-error">{adminFormErrors.state}</span>
+                  )}
+                </div>
+
+              </div>
+
+              {/* City & Zip row */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                <div className="form-group">
+                  <label className="form-label">City</label>
+                  <input
+                    type="text"
+                    value={newAdminForm.city}
+                    className={getAdminFormInputClass("city")}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, city: e.target.value })}
+                    onFocus={() => setAdminFormActiveField("city")}
+                    onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, city: true })); }}
+                    required
+                  />
+                  {adminFormValidated.city && adminFormErrors.city && (
+                    <span className="form-error">{adminFormErrors.city}</span>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ZIP / Postal Code</label>
+                  <input
+                    type="text"
+                    value={newAdminForm.zip}
+                    className={getAdminFormInputClass("zip")}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, zip: e.target.value })}
+                    onFocus={() => setAdminFormActiveField("zip")}
+                    onBlur={() => { setAdminFormActiveField(null); setAdminFormValidated(p => ({ ...p, zip: true })); }}
+                    required
+                  />
+                  {adminFormValidated.zip && adminFormErrors.zip && (
+                    <span className="form-error">{adminFormErrors.zip}</span>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "24px" }}>
+                <button type="button" onClick={() => setShowAddAdminModal(false)} className="btn btn-outline">Cancel</button>
+                <button type="submit" className="btn btn-primary">Create Admin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {popup && (
         <Popup
