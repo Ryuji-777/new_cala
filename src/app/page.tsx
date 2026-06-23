@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Header from "@/components/Header";
 
 export default function Home() {
   const categories = [
@@ -23,22 +24,7 @@ export default function Home() {
   return (
     <>
       {/* Header Navigation */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo" id="nav-logo">
-            <div className="logo-icon">C</div>
-            Cala
-          </Link>
-          <nav className="nav-links">
-            <Link href="/login" className="nav-link" id="nav-login">
-              Log in
-            </Link>
-            <Link href="/signup" className="btn btn-primary" id="nav-signup">
-              Sign up
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header activeWorkspace="home" />
 
       {/* Hero Section - Centered, Stats numbers removed */}
       <section className="hero" style={{ textAlign: "center", padding: "80px 0" }}>
@@ -53,7 +39,7 @@ export default function Home() {
             <Link href="/signup" className="btn btn-primary" style={{ padding: "12px 28px", fontSize: "16px" }}>
               Get Started
             </Link>
-            <Link href="/login" className="btn btn-outline" style={{ padding: "12px 28px", fontSize: "16px" }}>
+            <Link href="/browse/jobs" className="btn btn-outline" style={{ padding: "12px 28px", fontSize: "16px" }}>
               Browse Jobs
             </Link>
           </div>

@@ -225,20 +225,111 @@ CREATE TRIGGER on_auth_user_created
 
 
 -- ROW LEVEL SECURITY (RLS) CONFIGURATION
--- For testing convenience in staging, we disable RLS on all tables so the web app can perform reads/writes.
--- You can run the following block in your Supabase SQL Editor:
-ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.freelancer_skills DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.services DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.jobs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.applications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.contracts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.payments DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.messages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.reviews DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.system_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.archives DISABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security (RLS) on all tables and configure granular security access control policies.
+
+ALTER TABLE IF EXISTS public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.freelancer_skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.system_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.archives ENABLE ROW LEVEL SECURITY;
+
+-- 1. Profiles Policies
+DROP POLICY IF EXISTS "Allow public read on profiles" ON public.profiles;
+CREATE POLICY "Allow public read on profiles" ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow users to update own profile" ON public.profiles;
+CREATE POLICY "Allow users to update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- 2. Freelancer Skills Policies
+DROP POLICY IF EXISTS "Allow public read on freelancer_skills" ON public.freelancer_skills;
+CREATE POLICY "Allow public read on freelancer_skills" ON public.freelancer_skills FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow freelancers to manage own skills" ON public.freelancer_skills;
+CREATE POLICY "Allow freelancers to manage own skills" ON public.freelancer_skills FOR ALL USING (auth.uid() = freelancer_id) WITH CHECK (auth.uid() = freelancer_id);
+
+-- 3. Jobs Policies
+DROP POLICY IF EXISTS "Allow public read on jobs" ON public.jobs;
+CREATE POLICY "Allow public read on jobs" ON public.jobs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow client to insert jobs" ON public.jobs;
+CREATE POLICY "Allow client to insert jobs" ON public.jobs FOR INSERT WITH CHECK (auth.uid() = client_id);
+DROP POLICY IF EXISTS "Allow client to update own jobs" ON public.jobs;
+CREATE POLICY "Allow client to update own jobs" ON public.jobs FOR UPDATE USING (auth.uid() = client_id) WITH CHECK (auth.uid() = client_id);
+DROP POLICY IF EXISTS "Allow client to delete own jobs" ON public.jobs;
+CREATE POLICY "Allow client to delete own jobs" ON public.jobs FOR DELETE USING (auth.uid() = client_id);
+
+-- 4. Applications Policies
+DROP POLICY IF EXISTS "Allow freelancer and job client to read applications" ON public.applications;
+CREATE POLICY "Allow freelancer and job client to read applications" ON public.applications FOR SELECT USING (auth.uid() = freelancer_id OR EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_id AND jobs.client_id = auth.uid()));
+DROP POLICY IF EXISTS "Allow freelancers to apply" ON public.applications;
+CREATE POLICY "Allow freelancers to apply" ON public.applications FOR INSERT WITH CHECK (auth.uid() = freelancer_id);
+DROP POLICY IF EXISTS "Allow freelancer or job client to update applications" ON public.applications;
+CREATE POLICY "Allow freelancer or job client to update applications" ON public.applications FOR UPDATE USING (auth.uid() = freelancer_id OR EXISTS (SELECT 1 FROM public.jobs WHERE jobs.id = job_id AND jobs.client_id = auth.uid()));
+DROP POLICY IF EXISTS "Allow freelancer to delete application" ON public.applications;
+CREATE POLICY "Allow freelancer to delete application" ON public.applications FOR DELETE USING (auth.uid() = freelancer_id);
+
+-- 5. Services Policies
+DROP POLICY IF EXISTS "Allow public read on services" ON public.services;
+CREATE POLICY "Allow public read on services" ON public.services FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow freelancers to post services" ON public.services;
+CREATE POLICY "Allow freelancers to post services" ON public.services FOR INSERT WITH CHECK (auth.uid() = freelancer_id);
+DROP POLICY IF EXISTS "Allow freelancers to update own services" ON public.services;
+CREATE POLICY "Allow freelancers to update own services" ON public.services FOR UPDATE USING (auth.uid() = freelancer_id) WITH CHECK (auth.uid() = freelancer_id);
+DROP POLICY IF EXISTS "Allow freelancers to delete own services" ON public.services;
+CREATE POLICY "Allow freelancers to delete own services" ON public.services FOR DELETE USING (auth.uid() = freelancer_id);
+
+-- 6. Contracts Policies
+DROP POLICY IF EXISTS "Allow parties to view contracts" ON public.contracts;
+CREATE POLICY "Allow parties to view contracts" ON public.contracts FOR SELECT USING (auth.uid() = client_id OR auth.uid() = freelancer_id);
+DROP POLICY IF EXISTS "Allow parties to insert contracts" ON public.contracts;
+CREATE POLICY "Allow parties to insert contracts" ON public.contracts FOR INSERT WITH CHECK (auth.uid() = client_id OR auth.uid() = freelancer_id);
+DROP POLICY IF EXISTS "Allow parties to update contracts" ON public.contracts;
+CREATE POLICY "Allow parties to update contracts" ON public.contracts FOR UPDATE USING (auth.uid() = client_id OR auth.uid() = freelancer_id) WITH CHECK (auth.uid() = client_id OR auth.uid() = freelancer_id);
+
+-- 7. Payments Policies
+DROP POLICY IF EXISTS "Allow parties to view payments" ON public.payments;
+CREATE POLICY "Allow parties to view payments" ON public.payments FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+DROP POLICY IF EXISTS "Allow inserting payments" ON public.payments;
+CREATE POLICY "Allow inserting payments" ON public.payments FOR INSERT WITH CHECK (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+-- 8. Messages Policies
+DROP POLICY IF EXISTS "Allow users to view their messages" ON public.messages;
+CREATE POLICY "Allow users to view their messages" ON public.messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+DROP POLICY IF EXISTS "Allow sending messages" ON public.messages;
+CREATE POLICY "Allow sending messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+DROP POLICY IF EXISTS "Allow updating messages" ON public.messages;
+CREATE POLICY "Allow updating messages" ON public.messages FOR UPDATE USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+
+-- 9. Notifications Policies
+DROP POLICY IF EXISTS "Allow users to view own notifications" ON public.notifications;
+CREATE POLICY "Allow users to view own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Allow inserting notifications" ON public.notifications;
+CREATE POLICY "Allow inserting notifications" ON public.notifications FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow users to update own notifications" ON public.notifications;
+CREATE POLICY "Allow users to update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 10. Reviews Policies
+DROP POLICY IF EXISTS "Allow public read on reviews" ON public.reviews;
+CREATE POLICY "Allow public read on reviews" ON public.reviews FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow contract parties to insert reviews" ON public.reviews;
+CREATE POLICY "Allow contract parties to insert reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
+
+-- 11. System Logs Policies
+DROP POLICY IF EXISTS "Allow admin read on system_logs" ON public.system_logs;
+CREATE POLICY "Allow admin read on system_logs" ON public.system_logs FOR SELECT USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (is_admin = true OR is_super_admin = true)));
+DROP POLICY IF EXISTS "Allow public insert on system_logs" ON public.system_logs;
+CREATE POLICY "Allow public insert on system_logs" ON public.system_logs FOR INSERT WITH CHECK (true);
+
+-- 12. Archives Policies
+DROP POLICY IF EXISTS "Allow admin read on archives" ON public.archives;
+CREATE POLICY "Allow admin read on archives" ON public.archives FOR SELECT USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (is_admin = true OR is_super_admin = true)));
+DROP POLICY IF EXISTS "Allow admin write on archives" ON public.archives;
+CREATE POLICY "Allow admin write on archives" ON public.archives FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (is_admin = true OR is_super_admin = true)));
+
 
 -- PORTFOLIO ITEMS TABLE
 -- Added for freelancers to showcase portfolio items
@@ -313,8 +404,14 @@ CREATE TABLE IF NOT EXISTS public.reports (
     resolved_at TIMESTAMPTZ
 );
 
--- Disable row level security for reports table
-ALTER TABLE IF EXISTS public.reports DISABLE ROW LEVEL SECURITY;
+-- Enable RLS and add policies for reports table
+ALTER TABLE IF EXISTS public.reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow viewing reports" ON public.reports;
+CREATE POLICY "Allow viewing reports" ON public.reports FOR SELECT USING (auth.uid() = reporter_id OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (is_admin = true OR is_super_admin = true)));
+DROP POLICY IF EXISTS "Allow inserting reports" ON public.reports;
+CREATE POLICY "Allow inserting reports" ON public.reports FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+DROP POLICY IF EXISTS "Allow admin update on reports" ON public.reports;
+CREATE POLICY "Allow admin update on reports" ON public.reports FOR UPDATE USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (is_admin = true OR is_super_admin = true)));
 
 -- Enable RLS and add public access policies for portfolio_items (resiliency against client/auth RLS limits)
 ALTER TABLE IF EXISTS public.portfolio_items ENABLE ROW LEVEL SECURITY;

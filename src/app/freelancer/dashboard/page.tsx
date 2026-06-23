@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import Header from "@/components/Header";
 
 // Predefined categories from user spec
 const categories = [
@@ -29,10 +30,7 @@ export default function FreelancerDashboard() {
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
+
 
   // Tabs: "overview", "find-work", "jobs", "messages", "wallet"
   const [activeTab, setActiveTab] = useState("overview");
@@ -62,58 +60,70 @@ export default function FreelancerDashboard() {
   const [serviceWorkDesc, setServiceWorkDesc] = useState("");
   const [serviceWorkFileError, setServiceWorkFileError] = useState<string | null>(null);
   const [serviceWorkFilePreviews, setServiceWorkFilePreviews] = useState<string[]>([]);
+  const [isWorkSampleDragging, setIsWorkSampleDragging] = useState(false);
 
-  const handleServiceWorkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Payout Simulator State
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [bankRoutingNumber, setBankRoutingNumber] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutErrors, setPayoutErrors] = useState<Record<string, string>>({});
+  const [payoutValidated, setPayoutValidated] = useState<Record<string, boolean>>({});
+
+  const validateAndSetServiceWorkFiles = (files: File[]) => {
     setServiceWorkFileError(null);
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      if (files.length === 0) {
-        setServiceWorkFiles([]);
-        setServiceWorkFilePreviews([]);
-        return;
-      }
-      
-      if (files.length > 4) {
-        const err = "You can only upload up to 4 images for a service posting.";
+    if (files.length === 0) {
+      setServiceWorkFiles([]);
+      setServiceWorkFilePreviews([]);
+      return true;
+    }
+    
+    if (files.length > 4) {
+      const err = "You can only upload up to 4 images for a service posting.";
+      setServiceWorkFileError(err);
+      setServiceWorkFiles([]);
+      setServiceWorkFilePreviews([]);
+      alert("Validation Error: " + err);
+      return false;
+    }
+
+    const validExtensions = ["png", "jpg", "jpeg"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+      if (!validExtensions.includes(fileExt)) {
+        const err = `Invalid file type for "${file.name}". Only PNG and JPG images are allowed.`;
         setServiceWorkFileError(err);
         setServiceWorkFiles([]);
         setServiceWorkFilePreviews([]);
-        e.target.value = "";
         alert("Validation Error: " + err);
-        return;
+        return false;
       }
-
-      const validExtensions = ["png", "jpg", "jpeg"];
-      const maxSize = 5 * 1024 * 1024; // 5MB
-
-      for (const file of files) {
-        const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-        if (!validExtensions.includes(fileExt)) {
-          const err = `Invalid file type for "${file.name}". Only PNG and JPG images are allowed.`;
-          setServiceWorkFileError(err);
-          setServiceWorkFiles([]);
-          setServiceWorkFilePreviews([]);
-          e.target.value = "";
-          alert("Validation Error: " + err);
-          return;
-        }
-        if (file.size > maxSize) {
-          const err = `File "${file.name}" is too large. Maximum size allowed is 5MB.`;
-          setServiceWorkFileError(err);
-          setServiceWorkFiles([]);
-          setServiceWorkFilePreviews([]);
-          e.target.value = "";
-          alert("Validation Error: " + err);
-          return;
-        }
+      if (file.size > maxSize) {
+        const err = `File "${file.name}" is too large. Maximum size allowed is 5MB.`;
+        setServiceWorkFileError(err);
+        setServiceWorkFiles([]);
+        setServiceWorkFilePreviews([]);
+        alert("Validation Error: " + err);
+        return false;
       }
+    }
 
-      // All files are valid
-      setServiceWorkFiles(files);
-      setServiceWorkFilePreviews(files.map((file) => URL.createObjectURL(file)));
+    // All files are valid
+    setServiceWorkFiles(files);
+    setServiceWorkFilePreviews(files.map((file) => URL.createObjectURL(file)));
+    return true;
+  };
+
+  const handleServiceWorkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const success = validateAndSetServiceWorkFiles(Array.from(e.target.files));
+      if (!success) {
+        e.target.value = "";
+      }
     } else {
-      setServiceWorkFiles([]);
-      setServiceWorkFilePreviews([]);
+      validateAndSetServiceWorkFiles([]);
     }
   };
   
@@ -142,27 +152,7 @@ export default function FreelancerDashboard() {
   const [reviewedContractIds, setReviewedContractIds] = useState<Set<string>>(new Set());
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  const loadNotifications = async (uId: string) => {
-    const { data: notifs } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", uId)
-      .order("created_at", { ascending: false });
 
-    if (notifs) {
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter((n) => !n.is_read).length);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (!profile) return;
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", profile.id);
-    loadNotifications(profile.id);
-  };
 
   const loadFreelancerData = async () => {
     setIsLoading(true);
@@ -194,7 +184,6 @@ export default function FreelancerDashboard() {
     }
 
     setProfile(prof);
-    await loadNotifications(user.id);
 
     // 1. Fetch Open Jobs (posted by other clients)
     const { data: openJobs } = await supabase
@@ -301,6 +290,89 @@ export default function FreelancerDashboard() {
   useEffect(() => {
     loadFreelancerData();
   }, []);
+
+  const validatePayoutField = (name: string, value: string): string => {
+    if (name === "withdrawalAmount") {
+      const amt = Number(value);
+      if (!value) return "Withdrawal amount is required.";
+      if (isNaN(amt) || amt <= 0) return "Amount must be greater than $0.";
+      if (profile && amt > Number(profile.wallet_balance)) {
+        return `Amount cannot exceed your current balance of $${Number(profile.wallet_balance).toFixed(2)}.`;
+      }
+      return "";
+    }
+    if (name === "bankRoutingNumber") {
+      if (!value) return "Routing number is required.";
+      if (!/^\d{9}$/.test(value)) return "Routing number must be exactly 9 digits.";
+      return "";
+    }
+    if (name === "bankAccountNumber") {
+      if (!value) return "Account number is required.";
+      if (!/^\d{8,17}$/.test(value)) return "Account number must be between 8 and 17 digits.";
+      return "";
+    }
+    return "";
+  };
+
+  const handleWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+
+    const fields = ["withdrawalAmount", "bankRoutingNumber", "bankAccountNumber"];
+    const vals = { withdrawalAmount, bankRoutingNumber, bankAccountNumber };
+
+    fields.forEach((field) => {
+      const err = validatePayoutField(field, (vals as any)[field]);
+      if (err) errors[field] = err;
+    });
+
+    setPayoutValidated({
+      withdrawalAmount: true,
+      bankRoutingNumber: true,
+      bankAccountNumber: true
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setPayoutErrors(errors);
+      return;
+    }
+
+    setPayoutErrors({});
+    setPayoutLoading(true);
+
+    try {
+      const amt = Number(withdrawalAmount);
+      const nextBalance = Number(profile.wallet_balance) - amt;
+      const { error: walletError } = await supabase
+        .from("profiles")
+        .update({ wallet_balance: nextBalance })
+        .eq("id", profile.id);
+
+      if (walletError) {
+        setPopup({ message: "Withdrawal failed: " + walletError.message, type: "error" });
+      } else {
+        await supabase.from("notifications").insert({
+          user_id: profile.id,
+          title: "Payout Request Processed! 🏦",
+          content: `Simulated payout of $${amt.toFixed(2)} to routing ending in ${bankRoutingNumber.slice(-3)} was completed.`,
+        });
+
+        setPopup({
+          message: `Successfully processed withdrawal of $${amt.toFixed(2)} to your bank account!`,
+          type: "success"
+        });
+        setWithdrawalAmount("");
+        setBankRoutingNumber("");
+        setBankAccountNumber("");
+        setPayoutValidated({});
+        await loadFreelancerData();
+      }
+    } catch (err: any) {
+      setPopup({ message: "An error occurred: " + err.message, type: "error" });
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
 
   // Validation checker for cover letter
   useEffect(() => {
@@ -662,65 +734,7 @@ export default function FreelancerDashboard() {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala Freelancer Workspace
-          </Link>
-          <nav className="nav-links">
-            <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
-              Logged in as: {profile.first_name} {profile.last_name}
-            </span>
-            <Link href="/profile/view" className="nav-link">My Profile</Link>
-
-            {/* Notifications Bell Dropdown */}
-            <div className="notif-container">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)} 
-                className="notif-bell-btn"
-                title="Notifications"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "20px", height: "20px" }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                </svg>
-                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-              </button>
-
-              {showNotifications && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">
-                    <span className="notif-title">Notifications</span>
-                    {unreadCount > 0 && (
-                      <button onClick={handleMarkAllRead} className="notif-mark-read">
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                  <div className="notif-list">
-                    {notifications.map((n) => (
-                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
-                        <div className="notif-item-title">{n.title}</div>
-                        <div className="notif-item-content">{n.content}</div>
-                        <div className="notif-item-time">
-                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    ))}
-                    {notifications.length === 0 && (
-                      <div className="notif-empty">No notifications yet.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
-              Log Out
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header profile={profile} onProfileUpdate={loadFreelancerData} activeWorkspace="freelancer" />
 
       {/* Main Workspace Layout */}
       <main style={{ padding: "40px 24px", flex: 1 }}>
@@ -1136,28 +1150,93 @@ export default function FreelancerDashboard() {
                           Include 1 to 4 images showing your work (max 5MB each, PNG or JPG only).
                         </p>
                         
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "12px" }}>
+                        <div
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsWorkSampleDragging(true);
+                          }}
+                          onDragLeave={() => setIsWorkSampleDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsWorkSampleDragging(false);
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                              validateAndSetServiceWorkFiles(Array.from(e.dataTransfer.files));
+                            }
+                          }}
+                          onClick={() => document.getElementById("serviceWorkFileInput")?.click()}
+                          style={{
+                            border: isWorkSampleDragging ? "2px dashed var(--primary-color)" : "2px dashed var(--border-color)",
+                            backgroundColor: isWorkSampleDragging ? "var(--primary-light)" : "var(--bg-main)",
+                            borderRadius: "var(--radius-sm)",
+                            padding: "24px",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            marginBottom: "12px"
+                          }}
+                        >
                           <input
+                            id="serviceWorkFileInput"
                             type="file"
                             accept="image/png, image/jpeg, image/jpg"
                             multiple
-                            style={{ fontSize: "14px" }}
+                            style={{ display: "none" }}
                             onChange={handleServiceWorkFileChange}
                           />
-                          
-                          {serviceWorkFilePreviews.length > 0 && (
-                            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                              {serviceWorkFilePreviews.map((preview, index) => (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: "32px", height: "32px", color: "var(--text-secondary)" }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375 1.5 0 11-.75 0 .375 1.5 0 01.75 0z" />
+                            </svg>
+                            <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)" }}>
+                              Drag & drop 1-4 work images here, or <span style={{ color: "var(--primary-color)" }}>browse</span>
+                            </span>
+                            <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>PNG or JPG up to 5MB each</span>
+                          </div>
+                        </div>
+
+                        {serviceWorkFilePreviews.length > 0 && (
+                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+                            {serviceWorkFilePreviews.map((preview, index) => (
+                              <div key={index} style={{ position: "relative" }}>
                                 <img 
-                                  key={index} 
                                   src={preview} 
                                   alt={`Preview ${index + 1}`} 
                                   style={{ width: "60px", height: "60px", borderRadius: "var(--radius-sm)", objectFit: "cover", border: "1px solid var(--border-color)" }} 
                                 />
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const nextFiles = serviceWorkFiles.filter((_, idx) => idx !== index);
+                                    validateAndSetServiceWorkFiles(nextFiles);
+                                  }}
+                                  style={{
+                                    position: "absolute",
+                                    top: "-4px",
+                                    right: "-4px",
+                                    backgroundColor: "var(--error-color)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "50%",
+                                    width: "16px",
+                                    height: "16px",
+                                    fontSize: "10px",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: "bold",
+                                    boxShadow: "var(--shadow-sm)"
+                                  }}
+                                  title="Remove image"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {serviceWorkFileError && (
                           <span className="form-error" style={{ display: "block", marginBottom: "12px" }}>{serviceWorkFileError}</span>
                         )}
@@ -1406,9 +1485,102 @@ export default function FreelancerDashboard() {
                     ${Number(profile.wallet_balance).toFixed(2)}
                   </h3>
                 </div>
-                <Link href="/profile/view" className="btn btn-outline" style={{ border: "1px solid var(--primary-color)", color: "var(--primary-color)" }}>
-                  Go to Profile to Manage Wallet
-                </Link>
+              </div>
+
+              {/* SIMULATED PAYOUT SIMULATOR CARD */}
+              <div className="card" style={{ padding: "32px", marginBottom: "32px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "16px" }}>Simulated Payout Simulator</h3>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                  Withdraw your earnings to a bank account. No real bank transfer will occur.
+                </p>
+                <form onSubmit={handleWithdrawal} noValidate style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "500px" }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Withdrawal Amount ($)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 200"
+                      className={`form-input ${payoutValidated.withdrawalAmount ? (payoutErrors.withdrawalAmount ? "is-invalid" : "is-valid") : ""}`}
+                      value={withdrawalAmount}
+                      onChange={(e) => {
+                        setWithdrawalAmount(e.target.value);
+                        if (payoutValidated.withdrawalAmount) {
+                          setPayoutErrors((prev) => ({ ...prev, withdrawalAmount: validatePayoutField("withdrawalAmount", e.target.value) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setPayoutValidated((prev) => ({ ...prev, withdrawalAmount: true }));
+                        setPayoutErrors((prev) => ({ ...prev, withdrawalAmount: validatePayoutField("withdrawalAmount", withdrawalAmount) }));
+                      }}
+                      required
+                    />
+                    {payoutValidated.withdrawalAmount && payoutErrors.withdrawalAmount && (
+                      <span className="form-error">{payoutErrors.withdrawalAmount}</span>
+                    )}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Bank Routing Number</label>
+                      <input
+                        type="text"
+                        placeholder="9 digits"
+                        maxLength={9}
+                        className={`form-input ${payoutValidated.bankRoutingNumber ? (payoutErrors.bankRoutingNumber ? "is-invalid" : "is-valid") : ""}`}
+                        value={bankRoutingNumber}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setBankRoutingNumber(val);
+                          if (payoutValidated.bankRoutingNumber) {
+                            setPayoutErrors((prev) => ({ ...prev, bankRoutingNumber: validatePayoutField("bankRoutingNumber", val) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setPayoutValidated((prev) => ({ ...prev, bankRoutingNumber: true }));
+                          setPayoutErrors((prev) => ({ ...prev, bankRoutingNumber: validatePayoutField("bankRoutingNumber", bankRoutingNumber) }));
+                        }}
+                        required
+                      />
+                      {payoutValidated.bankRoutingNumber && payoutErrors.bankRoutingNumber && (
+                        <span className="form-error">{payoutErrors.bankRoutingNumber}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Bank Account Number</label>
+                      <input
+                        type="text"
+                        placeholder="8-17 digits"
+                        maxLength={17}
+                        className={`form-input ${payoutValidated.bankAccountNumber ? (payoutErrors.bankAccountNumber ? "is-invalid" : "is-valid") : ""}`}
+                        value={bankAccountNumber}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setBankAccountNumber(val);
+                          if (payoutValidated.bankAccountNumber) {
+                            setPayoutErrors((prev) => ({ ...prev, bankAccountNumber: validatePayoutField("bankAccountNumber", val) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setPayoutValidated((prev) => ({ ...prev, bankAccountNumber: true }));
+                          setPayoutErrors((prev) => ({ ...prev, bankAccountNumber: validatePayoutField("bankAccountNumber", bankAccountNumber) }));
+                        }}
+                        required
+                      />
+                      {payoutValidated.bankAccountNumber && payoutErrors.bankAccountNumber && (
+                        <span className="form-error">{payoutErrors.bankAccountNumber}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={payoutLoading}
+                    style={{ width: "100%", padding: "12px", marginTop: "8px", fontWeight: "700" }}
+                  >
+                    {payoutLoading ? "Processing Simulated Withdrawal..." : "Withdraw Funds"}
+                  </button>
+                </form>
               </div>
 
               {/* PAYMENT LOGS */}

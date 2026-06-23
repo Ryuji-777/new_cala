@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import Header from "@/components/Header";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -271,29 +272,7 @@ export default function JobDetailPage({ params }: PageProps) {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala
-          </Link>
-          <nav className="nav-links">
-            {currentUserProfile ? (
-              <>
-                <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
-                  Logged in as: {currentUserProfile.first_name} {currentUserProfile.last_name}
-                </span>
-                <Link href="/profile/view" className="nav-link">My Profile</Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="nav-link">Log in</Link>
-                <Link href="/signup" className="btn btn-primary" style={{ padding: "6px 14px", fontSize: "13px" }}>Sign up</Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Header profile={currentUserProfile} onProfileUpdate={loadJobData} activeWorkspace="home" />
 
       {/* Main content with side by side layout */}
       <main style={{ padding: "48px 24px", flex: 1 }}>

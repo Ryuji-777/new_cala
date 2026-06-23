@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import Header from "@/components/Header";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -214,24 +215,7 @@ export default function PublicProfilePage({ params }: PageProps) {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala
-          </Link>
-          <nav className="nav-links">
-            {currentUserId ? (
-              <Link href="/profile/view" className="nav-link">My Profile</Link>
-            ) : (
-              <>
-                <Link href="/login" className="nav-link">Log in</Link>
-                <Link href="/signup" className="btn btn-primary" style={{ padding: "6px 14px", fontSize: "13px" }}>Sign up</Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Header profile={currentUserProfile} activeWorkspace="browse" />
 
       {/* Profile Detail View */}
       <main style={{ padding: "48px 24px", flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -283,13 +267,19 @@ export default function PublicProfilePage({ params }: PageProps) {
             </div>
           </div>
 
-            {currentUserId && (
+            {currentUserId !== targetUserId && (
               <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={handleMessageUser} className="btn btn-primary" style={{ padding: "8px 16px" }}>
                   Send Message
                 </button>
                 <button 
-                  onClick={() => setShowReportModal(true)} 
+                  onClick={() => {
+                    if (!currentUserId) {
+                      router.push("/login");
+                    } else {
+                      setShowReportModal(true);
+                    }
+                  }} 
                   className="btn btn-outline" 
                   style={{ padding: "8px 16px", color: "var(--error-color)", borderColor: "var(--error-border)" }}
                 >

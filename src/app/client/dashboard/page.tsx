@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
 import ConfirmPopup from "@/components/ConfirmPopup";
+import Header from "@/components/Header";
 
 // Predefined categories and skills from user spec
 const skillsCategories: Record<string, string[]> = {
@@ -51,10 +52,7 @@ export default function ClientDashboard() {
   const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
+
 
   // Tabs: "overview", "post-job", "manage-jobs", "contracts", "messages", "wallet"
   const [activeTab, setActiveTab] = useState("overview");
@@ -91,6 +89,15 @@ export default function ClientDashboard() {
   const [validatedFields, setValidatedFields] = useState<Record<string, boolean>>({});
   const [activeField, setActiveField] = useState<string | null>(null);
 
+  // Deposit Simulator State
+  const [depositAmount, setDepositAmount] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [cvc, setCvc] = useState("");
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [depositErrors, setDepositErrors] = useState<Record<string, string>>({});
+  const [depositValidated, setDepositValidated] = useState<Record<string, boolean>>({});
+
   // Review Modal state
   const [reviewContract, setReviewContract] = useState<any>(null);
   const [rating, setRating] = useState(5);
@@ -98,27 +105,7 @@ export default function ClientDashboard() {
   const [reviewedContractIds, setReviewedContractIds] = useState<Set<string>>(new Set());
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  const loadNotifications = async (uId: string) => {
-    const { data: notifs } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", uId)
-      .order("created_at", { ascending: false });
 
-    if (notifs) {
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter((n) => !n.is_read).length);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (!profile) return;
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", profile.id);
-    loadNotifications(profile.id);
-  };
 
   const loadClientData = async () => {
     setIsLoading(true);
@@ -149,7 +136,6 @@ export default function ClientDashboard() {
     }
 
     setProfile(prof);
-    await loadNotifications(user.id);
 
     // 1. Fetch Client's posted jobs
     const { data: jobs } = await supabase
@@ -260,6 +246,94 @@ export default function ClientDashboard() {
   useEffect(() => {
     loadClientData();
   }, []);
+
+  const validateDepositField = (name: string, value: string): string => {
+    if (name === "depositAmount") {
+      const amt = Number(value);
+      if (!value) return "Deposit amount is required.";
+      if (isNaN(amt) || amt <= 0) return "Amount must be greater than $0.";
+      return "";
+    }
+    if (name === "cardNumber") {
+      const cleanCard = value.replace(/\s+/g, "");
+      if (!value) return "Card number is required.";
+      if (!/^\d{16}$/.test(cleanCard)) return "Card number must be exactly 16 digits.";
+      return "";
+    }
+    if (name === "expiryDate") {
+      if (!value) return "Expiry date is required.";
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(value)) return "Use MM/YY format.";
+      return "";
+    }
+    if (name === "cvc") {
+      if (!value) return "CVC is required.";
+      if (!/^\d{3}$/.test(value)) return "CVC must be 3 digits.";
+      return "";
+    }
+    return "";
+  };
+
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+    
+    const fields = ["depositAmount", "cardNumber", "expiryDate", "cvc"];
+    const vals = { depositAmount, cardNumber, expiryDate, cvc };
+    
+    fields.forEach((field) => {
+      const err = validateDepositField(field, (vals as any)[field]);
+      if (err) errors[field] = err;
+    });
+
+    setDepositValidated({
+      depositAmount: true,
+      cardNumber: true,
+      expiryDate: true,
+      cvc: true
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setDepositErrors(errors);
+      return;
+    }
+
+    setDepositErrors({});
+    setDepositLoading(true);
+
+    try {
+      const amt = Number(depositAmount);
+      const nextBalance = Number(profile.wallet_balance) + amt;
+      const { error: walletError } = await supabase
+        .from("profiles")
+        .update({ wallet_balance: nextBalance })
+        .eq("id", profile.id);
+
+      if (walletError) {
+        setPopup({ message: "Deposit failed: " + walletError.message, type: "error" });
+      } else {
+        await supabase.from("notifications").insert({
+          user_id: profile.id,
+          title: "Wallet Deposit Successful! 💳",
+          content: `$${amt.toFixed(2)} has been successfully deposited into your simulated wallet.`,
+        });
+
+        setPopup({
+          message: `Successfully deposited $${amt.toFixed(2)} into your simulated wallet!`,
+          type: "success"
+        });
+        setDepositAmount("");
+        setCardNumber("");
+        setExpiryDate("");
+        setCvc("");
+        setDepositValidated({});
+        await loadClientData();
+      }
+    } catch (err: any) {
+      setPopup({ message: "An error occurred: " + err.message, type: "error" });
+    } finally {
+      setDepositLoading(false);
+    }
+  };
 
   // Validation function for job post fields
   const validateField = (name: string, value: any): string => {
@@ -740,65 +814,7 @@ export default function ClientDashboard() {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala Client Workspace
-          </Link>
-          <nav className="nav-links">
-            <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
-              Logged in as: {profile.first_name} {profile.last_name}
-            </span>
-            <Link href="/profile/view" className="nav-link">My Profile</Link>
-
-            {/* Notifications Bell Dropdown */}
-            <div className="notif-container">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)} 
-                className="notif-bell-btn"
-                title="Notifications"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "20px", height: "20px" }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                </svg>
-                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-              </button>
-
-              {showNotifications && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">
-                    <span className="notif-title">Notifications</span>
-                    {unreadCount > 0 && (
-                      <button onClick={handleMarkAllRead} className="notif-mark-read">
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                  <div className="notif-list">
-                    {notifications.map((n) => (
-                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
-                        <div className="notif-item-title">{n.title}</div>
-                        <div className="notif-item-content">{n.content}</div>
-                        <div className="notif-item-time">
-                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    ))}
-                    {notifications.length === 0 && (
-                      <div className="notif-empty">No notifications yet.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
-              Log Out
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header profile={profile} onProfileUpdate={loadClientData} activeWorkspace="client" />
 
       {/* Main Client Panel Layout */}
       <main style={{ padding: "40px 24px", flex: 1 }}>
@@ -1418,9 +1434,132 @@ export default function ClientDashboard() {
                     ${Number(profile.wallet_balance).toFixed(2)}
                   </h3>
                 </div>
-                <Link href="/profile/view" className="btn btn-outline" style={{ border: "1px solid var(--primary-color)", color: "var(--primary-color)" }}>
-                  Go to Profile to Manage Wallet
-                </Link>
+              </div>
+
+              {/* SIMULATED WALLET DEPOSIT CARD */}
+              <div className="card" style={{ padding: "32px", marginBottom: "32px" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "16px" }}>Simulated Wallet Deposit (Staging Top-up)</h3>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                  Add funds to your simulated wallet. No real payment processing will occur.
+                </p>
+                <form onSubmit={handleDeposit} noValidate style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "500px" }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Deposit Amount ($)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 500"
+                      className={`form-input ${depositValidated.depositAmount ? (depositErrors.depositAmount ? "is-invalid" : "is-valid") : ""}`}
+                      value={depositAmount}
+                      onChange={(e) => {
+                        setDepositAmount(e.target.value);
+                        if (depositValidated.depositAmount) {
+                          setDepositErrors((prev) => ({ ...prev, depositAmount: validateDepositField("depositAmount", e.target.value) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setDepositValidated((prev) => ({ ...prev, depositAmount: true }));
+                        setDepositErrors((prev) => ({ ...prev, depositAmount: validateDepositField("depositAmount", depositAmount) }));
+                      }}
+                      required
+                    />
+                    {depositValidated.depositAmount && depositErrors.depositAmount && (
+                      <span className="form-error">{depositErrors.depositAmount}</span>
+                    )}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "12px" }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Card Number</label>
+                      <input
+                        type="text"
+                        placeholder="1111 2222 3333 4444"
+                        maxLength={19}
+                        className={`form-input ${depositValidated.cardNumber ? (depositErrors.cardNumber ? "is-invalid" : "is-valid") : ""}`}
+                        value={cardNumber}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, "");
+                          val = val.match(/.{1,4}/g)?.join(" ") || val;
+                          setCardNumber(val);
+                          if (depositValidated.cardNumber) {
+                            setDepositErrors((prev) => ({ ...prev, cardNumber: validateDepositField("cardNumber", val) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setDepositValidated((prev) => ({ ...prev, cardNumber: true }));
+                          setDepositErrors((prev) => ({ ...prev, cardNumber: validateDepositField("cardNumber", cardNumber) }));
+                        }}
+                        required
+                      />
+                      {depositValidated.cardNumber && depositErrors.cardNumber && (
+                        <span className="form-error">{depositErrors.cardNumber}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Expiry Date</label>
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        maxLength={5}
+                        className={`form-input ${depositValidated.expiryDate ? (depositErrors.expiryDate ? "is-invalid" : "is-valid") : ""}`}
+                        value={expiryDate}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.length === 2 && expiryDate.length === 1) {
+                            val += "/";
+                          }
+                          setExpiryDate(val);
+                          if (depositValidated.expiryDate) {
+                            setDepositErrors((prev) => ({ ...prev, expiryDate: validateDepositField("expiryDate", val) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setDepositValidated((prev) => ({ ...prev, expiryDate: true }));
+                          setDepositErrors((prev) => ({ ...prev, expiryDate: validateDepositField("expiryDate", expiryDate) }));
+                        }}
+                        required
+                      />
+                      {depositValidated.expiryDate && depositErrors.expiryDate && (
+                        <span className="form-error">{depositErrors.expiryDate}</span>
+                      )}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">CVC</label>
+                      <input
+                        type="password"
+                        placeholder="123"
+                        maxLength={3}
+                        className={`form-input ${depositValidated.cvc ? (depositErrors.cvc ? "is-invalid" : "is-valid") : ""}`}
+                        value={cvc}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setCvc(val);
+                          if (depositValidated.cvc) {
+                            setDepositErrors((prev) => ({ ...prev, cvc: validateDepositField("cvc", val) }));
+                          }
+                        }}
+                        onBlur={() => {
+                          setDepositValidated((prev) => ({ ...prev, cvc: true }));
+                          setDepositErrors((prev) => ({ ...prev, cvc: validateDepositField("cvc", cvc) }));
+                        }}
+                        required
+                      />
+                      {depositValidated.cvc && depositErrors.cvc && (
+                        <span className="form-error">{depositErrors.cvc}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={depositLoading}
+                    style={{ width: "100%", padding: "12px", marginTop: "8px", fontWeight: "700" }}
+                  >
+                    {depositLoading ? "Processing Simulated Deposit..." : "Deposit Funds"}
+                  </button>
+                </form>
               </div>
 
               {/* PAYMENT LOGS */}

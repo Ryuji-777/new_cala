@@ -1,0 +1,106 @@
+================================================================================
+CALA FREELANCE MARKETPLACE - PROPOSED REVISIONS & IMPROVEMENTS
+================================================================================
+
+This document outlines the systematic revisions, features, and enhancements to
+complete Cala and elevate it to standard, premium website status. The changes
+are organized into Core Features, UI/UX & User Flow, Forms, and Security.
+
+--------------------------------------------------------------------------------
+1. FILLING WHAT'S MISSING (CORE FEATURES FOR A STANDARD REAL WEBSITE)
+--------------------------------------------------------------------------------
+A. Unified Global Navigation Header Component
+   - Currently, the navigation header is duplicated with hardcoded layouts inside
+     almost every page (landing page, login, signup, client dashboard, freelancer
+     dashboard, admin dashboard, profile setup/view, and service/job details).
+   - Revision: Create a single, shared `Header.tsx` component in `src/components` that
+     dynamically reads the Supabase session, displays the user's name/avatar, manages
+     the unified notification dropdown bell, reflects the simulated wallet balance
+     in real-time, and allows seamless workspace toggling.
+
+B. Public Browse & Directory Pages (SEO & Guest Access)
+   - A real website allows guests to discover postings before authentication.
+   - Revision: Build a public `/browse` workspace containing:
+     - `/browse/jobs`: A public directory showing open jobs with search/filters.
+     - `/browse/services`: A public catalog showing available freelancer services.
+     - `/profile/[id]`: Accessible publicly to showcase freelancer portfolios, 
+       reviews, and skills.
+     - Link the landing page search/CTAs directly to these public directories.
+
+C. Wallet Deposit & Withdrawal Simulator
+   - While the DB schema contains a `wallet_balance` field, there is no UI to add
+     or extract simulated money.
+   - Revision: Add interactive simulator controls in the "Payments & Wallet" tabs:
+     - "Top-Up Wallet" (for clients to simulate card/payment deposits).
+     - "Request Payout/Withdrawal" (for freelancers to transfer earnings).
+
+D. Essential Institutional Pages
+   - Every standard website has basic pages explaining its mission and terms.
+   - Revision: Implement or polish:
+     - `/about`: Standard informational page explaining the marketplace.
+     - `/faq`: Interactive accordion-style FAQ for freelancers and clients.
+     - `/contact`: Help desk contact form where users can submit inquiries, 
+       saving them to the reports/system_logs table for administrators.
+
+--------------------------------------------------------------------------------
+2. USER INTERFACE (UI) & USER EXPERIENCE (UX) IMPROVEMENTS
+--------------------------------------------------------------------------------
+A. Premium Aesthetic Transition (WOW Factor)
+   - Replace the generic system colors (plain blue `#3175b9`, basic whites/slates)
+     with a cohesive, sophisticated HSL palette (deep indigo/slate brand theme).
+   - Typography: Leverage Google Fonts (Inter/Outfit) via next/font.
+   - Apply modern shadows (`var(--shadow-md)`, `var(--shadow-lg)`) and subtle
+     gradients to primary buttons and headers.
+
+B. Interactive Micro-Animations & Hover Effects
+   - Apply card-lifting translations (`transform: translateY(-4px)`) and transition
+     effects on all hoverable items (job cards, service cards, dashboard tabs).
+   - Implement smooth fade-in/slide-out animations for popup modals.
+
+C. Loading Skeletons & Transitions
+   - Replace the default "Loading Workspace..." text with pulsing skeleton panels
+     to make loading states feel responsive and fluid.
+
+--------------------------------------------------------------------------------
+3. USER FLOWS & WORKSPACE TOGGLE ENHANCEMENTS
+--------------------------------------------------------------------------------
+A. Instant Dual-Role Switcher
+   - Currently, switching between Client and Freelancer dashboards requires going
+     deep into the profile settings.
+   - Revision: Provide an instant "Switch to Client" / "Switch to Freelancer" mode
+     toggle inside the main navbar when the user is set up for both roles.
+
+B. Enhanced Contract Execution Flow
+   - Visual progress tracker on contracts showing phase transitions:
+     `Ongoing -> Delivered/Pending Approval -> Completed & Released`.
+
+--------------------------------------------------------------------------------
+4. FORMS & INPUT VALIDATION IMPROVEMENTS
+--------------------------------------------------------------------------------
+A. Inline Validation & Visual Feedback
+   - Highlight fields instantly when they violate constraints (e.g., descriptions
+     under 150 characters or budget <= 0) without waiting for form submission.
+   - Real-time character counters showing `(Current: 120/600 characters)`.
+
+B. Advanced Drag-and-Drop File Uploaders
+   - Modern dropzones for profile setup (ID attachments) and services (work samples)
+     with clear constraints, image preview cards, and removal controls.
+
+--------------------------------------------------------------------------------
+5. SECURITY & ROBUSTNESS IMPROVEMENTS
+--------------------------------------------------------------------------------
+A. Next.js Edge Middleware for Route Protection
+   - Current pages check session on the client, causing "unauthorized page flicker"
+     where restricted content is visible before redirecting to `/login`.
+   - Revision: Create `src/middleware.ts` utilizing `src/proxy.ts` to perform session
+     validation at the Edge, redirecting users before the browser renders the page.
+
+B. Proper Row Level Security (RLS) Implementation
+   - Currently, RLS is disabled (`DISABLE ROW LEVEL SECURITY`) on all tables.
+   - Revision: Outline the SQL queries to re-enable RLS on all tables and draft safe
+     policies (e.g., users can only read their own messages, contracts are visible
+     only to the client, freelancer, and admins).
+
+C. Input Sanitization & HTML Escaping
+   - Escaping message content and description rendering to prevent Cross-Site
+     Scripting (XSS) when displaying custom descriptions or chat messages.

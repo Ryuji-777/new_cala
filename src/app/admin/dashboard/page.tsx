@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { createBrowserClient } from "@supabase/ssr";
 import Popup from "@/components/Popup";
 import ConfirmPopup from "@/components/ConfirmPopup";
+import Header from "@/components/Header";
 
 const countriesData = [
   {
@@ -252,10 +253,7 @@ export default function AdminDashboardPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [verificationFilter, setVerificationFilter] = useState("all");
 
-  // Notifications State
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotifications, setShowNotifications] = useState(false);
+
 
   // Moderation Reports State
   const [reports, setReports] = useState<any[]>([]);
@@ -295,31 +293,10 @@ export default function AdminDashboardPage() {
 
     await loadStats();
     await loadDataLists();
-    await loadNotifications(user.id);
     setIsLoading(false);
   };
 
-  const loadNotifications = async (uId: string) => {
-    const { data: notifs } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", uId)
-      .order("created_at", { ascending: false });
 
-    if (notifs) {
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter((n) => !n.is_read).length);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (!currentAdminProfile) return;
-    await supabase
-      .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", currentAdminProfile.id);
-    loadNotifications(currentAdminProfile.id);
-  };
 
   const loadStats = async () => {
     const { data: allProfiles } = await supabase.from("profiles").select("id, is_verified, is_freelancer, is_client, is_admin");
@@ -1152,64 +1129,7 @@ export default function AdminDashboardPage() {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala Admin Portal
-          </Link>
-          <nav className="nav-links">
-            <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600" }}>
-              Welcome, {currentAdminProfile.first_name} ({isSuperAdmin ? "Super Admin" : "Admin"})
-            </span>
-            
-            {/* Notifications Bell Dropdown */}
-            <div className="notif-container">
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)} 
-                className="notif-bell-btn"
-                title="Notifications"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: "20px", height: "20px" }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                </svg>
-                {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
-              </button>
-
-              {showNotifications && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">
-                    <span className="notif-title">Notifications</span>
-                    {unreadCount > 0 && (
-                      <button onClick={handleMarkAllRead} className="notif-mark-read">
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                  <div className="notif-list">
-                    {notifications.map((n) => (
-                      <div key={n.id} className={`notif-item ${!n.is_read ? "unread" : ""}`}>
-                        <div className="notif-item-title">{n.title}</div>
-                        <div className="notif-item-content">{n.content}</div>
-                        <div className="notif-item-time">
-                          {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    ))}
-                    {notifications.length === 0 && (
-                      <div className="notif-empty">No notifications yet.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
-              Log Out
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header profile={currentAdminProfile} onProfileUpdate={verifyAdminAccess} activeWorkspace="admin" workspaceTitle="Cala Admin Portal" />
 
       <main style={{ padding: "40px 24px", flex: 1 }}>
         <div className="container">

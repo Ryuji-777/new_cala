@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
+import Header from "@/components/Header";
 
 // Searchable location data
 const countriesData = [
@@ -354,6 +355,7 @@ export default function ProfileViewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [walletAmount, setWalletAmount] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Fetch current user details
   const fetchProfileData = async () => {
@@ -841,19 +843,7 @@ export default function ProfileViewPage() {
   return (
     <>
       {/* Navigation Header */}
-      <header className="header">
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            <div className="logo-icon">C</div>
-            Cala
-          </Link>
-          <nav className="nav-links">
-            <button onClick={handleLogout} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "13px" }}>
-              Log Out
-            </button>
-          </nav>
-        </div>
-      </header>
+      <Header profile={profile} onProfileUpdate={fetchProfileData} activeWorkspace="profile" />
 
       {/* Main Profile Layout */}
       <main style={{ padding: "48px 24px", flex: 1, display: "flex", justifyContent: "center" }}>
@@ -1326,18 +1316,76 @@ export default function ProfileViewPage() {
                   <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px" }}>
                     Leave blank to keep your current verified ID. Uploading a new ID will mark your account as unverified until approved again by an admin.
                   </p>
-                  <input
-                    id="idFile"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setIdFile(e.target.files[0]);
-                      } else {
-                        setIdFile(null);
+                  
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        setIdFile(e.dataTransfer.files[0]);
                       }
                     }}
-                  />
+                    onClick={() => document.getElementById("idFileEditInput")?.click()}
+                    style={{
+                      border: isDragging ? "2px dashed var(--primary-color)" : "2px dashed var(--border-color)",
+                      backgroundColor: isDragging ? "var(--primary-light)" : "var(--bg-main)",
+                      borderRadius: "var(--radius-sm)",
+                      padding: "24px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <input
+                      id="idFileEditInput"
+                      type="file"
+                      accept="image/*,.pdf"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setIdFile(e.target.files[0]);
+                        } else {
+                          setIdFile(null);
+                        }
+                      }}
+                    />
+                    {idFile ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="var(--success-color)" style={{ width: "32px", height: "32px" }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                        </svg>
+                        <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)" }}>{idFile.name}</span>
+                        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{(idFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIdFile(null);
+                          }}
+                          className="btn btn-outline"
+                          style={{ padding: "3px 10px", fontSize: "10px", color: "var(--error-color)", borderColor: "var(--error-border)", marginTop: "6px" }}
+                        >
+                          Remove ID File
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: "32px", height: "32px", color: "var(--text-secondary)" }}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                        </svg>
+                        <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)" }}>
+                          Drag & drop new ID here, or <span style={{ color: "var(--primary-color)" }}>browse</span>
+                        </span>
+                        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>PNG, JPG, or PDF (Max 5MB)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Buttons row */}

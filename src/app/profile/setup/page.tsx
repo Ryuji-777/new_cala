@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Header from "@/components/Header";
 
 // Searchable location data
 const countriesData = [
@@ -252,6 +253,7 @@ export default function ProfileSetupPage() {
   const [selectedCategory, setSelectedCategory] = useState("Programming & Development");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Profile Picture State
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -600,15 +602,7 @@ export default function ProfileSetupPage() {
   return (
     <>
       {/* Header */}
-      <header className="header">
-        <div className="container header-container">
-          <div className="logo">
-            <div className="logo-icon">C</div>
-            Cala
-          </div>
-          <span style={{ fontSize: "14px", color: "var(--text-secondary)", fontWeight: "600" }}>Account Onboarding</span>
-        </div>
-      </header>
+      <Header activeWorkspace="profile" workspaceTitle="Cala" />
 
       {/* Main onboarding container */}
       <main style={{ padding: "48px 24px", flex: 1, display: "flex", justifyContent: "center" }}>
@@ -950,24 +944,81 @@ export default function ProfileSetupPage() {
               <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "8px" }}>
                 Upload a scanned copy or clear picture of a Government-issued ID (driver license, passport, etc.). Admins must verify this document before applications or job posts can be finalized.
               </p>
-              <input
-                id="idFile"
-                type="file"
-                accept="image/*,.pdf"
-                style={{ display: "block", fontSize: "14px" }}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    setIdFile(e.target.files[0]);
-                  } else {
-                    setIdFile(null);
-                  }
-                  setValidatedFields((prev) => ({ ...prev, idFile: true }));
+              
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
                 }}
-                onBlur={() => setValidatedFields((prev) => ({ ...prev, idFile: true }))}
-                required
-              />
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    setIdFile(e.dataTransfer.files[0]);
+                    setValidatedFields((prev) => ({ ...prev, idFile: true }));
+                  }
+                }}
+                onClick={() => document.getElementById("idFile")?.click()}
+                style={{
+                  border: isDragging ? "2px dashed var(--primary-color)" : "2px dashed var(--border-color)",
+                  backgroundColor: isDragging ? "var(--primary-light)" : "var(--bg-main)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "32px 24px",
+                  textAlign: "center",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  marginTop: "8px",
+                }}
+              >
+                <input
+                  id="idFile"
+                  type="file"
+                  accept="image/*,.pdf"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setIdFile(e.target.files[0]);
+                    } else {
+                      setIdFile(null);
+                    }
+                    setValidatedFields((prev) => ({ ...prev, idFile: true }));
+                  }}
+                />
+                {idFile ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="var(--success-color)" style={{ width: "36px", height: "36px" }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                    </svg>
+                    <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>{idFile.name}</span>
+                    <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>{(idFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIdFile(null);
+                        setValidatedFields((prev) => ({ ...prev, idFile: true }));
+                      }}
+                      className="btn btn-outline"
+                      style={{ padding: "4px 12px", fontSize: "11px", color: "var(--error-color)", borderColor: "var(--error-border)", marginTop: "8px" }}
+                    >
+                      Remove File
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: "36px", height: "36px", color: "var(--text-secondary)" }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-primary)" }}>
+                      Drag and drop your ID file here, or <span style={{ color: "var(--primary-color)" }}>browse</span>
+                    </span>
+                    <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>Supports PNG, JPG, or PDF (Max 5MB)</span>
+                  </div>
+                )}
+              </div>
               {validatedFields.idFile && errors.idFile && (
-                <span className="form-error">{errors.idFile}</span>
+                <span className="form-error" style={{ display: "block", marginTop: "6px" }}>{errors.idFile}</span>
               )}
             </div>
 

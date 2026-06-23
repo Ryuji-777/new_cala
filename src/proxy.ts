@@ -32,7 +32,22 @@ export async function proxy(request: NextRequest) {
   );
 
   // Refresh user session
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Enforce Edge Route Protection for private workspaces
+  const pathname = request.nextUrl.pathname;
+  const isProtectedRoute = 
+    pathname.startsWith('/client') || 
+    pathname.startsWith('/freelancer') || 
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/profile/setup') ||
+    pathname.startsWith('/profile/view');
+
+  if (isProtectedRoute && !user) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('next', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return response;
 }
