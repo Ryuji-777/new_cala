@@ -7,18 +7,73 @@ import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
 import Header from "@/components/Header";
 
-// Predefined categories from user spec
-const categories = [
-  "Programming & Development",
-  "Writing & Translation",
-  "Design & Art",
-  "Administrative & Secretarial",
-  "Sales & Marketing",
-  "Engineering & Architecture",
-  "Business & Finance",
-  "Education & Training",
-  "Legal"
-];
+// Predefined categories and skills from the user spec
+const skillsCategories: Record<string, string[]> = {
+  "Programming & Development": [
+    "Web Developers", "Software Developers", "PHP Developers", "WordPress Experts", 
+    "JavaScript Developers", "HTML Developers", "Designers", "CSS Developers", 
+    "Web Designers", "MySQL Developers", "Java Developers", "jQuery Developers", 
+    "SQL Developers", "Computer Programmers", "App Developers", "Front End Developers", 
+    "Python Developers", "C# Developers", "Management Experts", "C Developers"
+  ],
+  "Writing & Translation": [
+    "Freelance Writers", "Data Entry Experts", "English Language Experts", "Typists", 
+    "Content Writers", "Article Writers", "Translators", "Blog Writing Services", 
+    "Editors", "Data Managers", "Proofreaders", "Researchers", "Microsoft Word Experts", 
+    "Copywriters", "Creative Writers", "Microsoft Developers", "Marketers", "News Writers", 
+    "Newsletters", "Journalists"
+  ],
+  "Design & Art": [
+    "Designers", "Graphic Designers", "Logo Designers", "Adobe Photoshop Designers", 
+    "Editors", "Business Card Designers", "Illustrators", "Poster Designers", 
+    "Creative Designers", "Banner Ad Designers", "Brochure Designers", "Adobe Illustrator Experts", 
+    "Photo Editors", "Flyer Designers", "Artists", "3D Designers", "Video Editors", 
+    "Web Designers", "Photographers", "Animators"
+  ],
+  "Administrative & Secretarial": [
+    "Data Entry Experts", "Data Managers", "Microsoft Developers", "Virtual Assistants", 
+    "Typists", "Microsoft Word Experts", "Researchers", "Microsoft Excel Experts", 
+    "Management Experts", "Customer Service Representatives", "Administrative Assistant", 
+    "Copy and Paste Experts", "Freelance Writers", "Office Assistants", "PowerPoint Experts", 
+    "Transcriptionists", "Marketers", "English Language Experts", "Accountants", "Editors"
+  ],
+  "Sales & Marketing": [
+    "Marketers", "Social Media Marketers", "Sales Experts", "Management Experts", 
+    "Digital Marketing Services", "Facebook Advertising", "SEO Experts", "Advertising Consultants", 
+    "Lead Generation Services", "Content Writers", "Keyword Researchers", "Data Entry Experts", 
+    "Email Marketers", "Researchers", "Instagram Marketers", "Analytics Experts", 
+    "Freelance Writers", "Designers", "Search Engine Marketers", "Customer Service Representatives"
+  ],
+  "Engineering & Architecture": [
+    "Designers", "3D Designers", "3D Modelers", "Mechanical Engineers", "Drawing Artists", 
+    "AutoCAD Designers", "Architects", "2D Designers", "Drafters", "3D Rendering Experts", 
+    "SolidWorks Designers", "Interior Designers", "Construction Experts", "Google SketchUp Experts", 
+    "Civil Engineers", "Software Developers", "Revit Designers", "3Ds Max Designers", 
+    "Adobe Photoshop Designers", "Analytics Experts"
+  ],
+  "Business & Finance": [
+    "Accountants", "Data Entry Experts", "Management Experts", "Financial Analysts", 
+    "Analytics Experts", "Data Managers", "Bookkeepers", "Microsoft Excel Experts", 
+    "QuickBooks Consultants", "Payroll Services", "Microsoft Developers", "Researchers", 
+    "Marketers", "Data Analysts", "Freelance Writers", "Business Consultants", "Financial Planners", 
+    "Project Managers", "Business Planners", "Sales Experts"
+  ],
+  "Education & Training": [
+    "Freelance Writers", "Trainers", "Tutors", "Mathematics Experts", "English Language Experts", 
+    "Data Entry Experts", "Data Managers", "Mathematics Tutors", "Content Writers", 
+    "English Teachers", "Educational Consultants", "Algebra Tutors", "Science Teachers", 
+    "Science Consultants", "Typists", "Designers", "Researchers", "Calculus Tutors", 
+    "Management Experts", "Mental Health Consultants"
+  ],
+  "Legal": [
+    "Legal Advisors", "Drafters", "Freelance Writers", "Researchers", "Legal Researchers", 
+    "Data Entry Experts", "Legal Assistants", "Legal Documents Services", "Paralegal Services", 
+    "Litigation Lawyers", "Business Consultants", "Typists", "Legal Writers", 
+    "Employment Contract Lawyers", "Management Experts", "English Language Experts"
+  ]
+};
+
+const categories = Object.keys(skillsCategories);
 
 export default function FreelancerDashboard() {
   const router = useRouter();
@@ -49,6 +104,13 @@ export default function FreelancerDashboard() {
   const [servicePrice, setServicePrice] = useState("");
   const [serviceDeliveryDays, setServiceDeliveryDays] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
+  const [selectedServiceSkills, setSelectedServiceSkills] = useState<string[]>([]);
+
+  const handleServiceSkillToggle = (skill: string) => {
+    setSelectedServiceSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+    );
+  };
 
   const [serviceErrors, setServiceErrors] = useState<Record<string, string>>({});
   const [serviceValidatedFields, setServiceValidatedFields] = useState<Record<string, boolean>>({});
@@ -483,6 +545,7 @@ export default function FreelancerDashboard() {
         price: Number(servicePrice),
         delivery_days: parseInt(serviceDeliveryDays, 10),
         category: serviceCategory,
+        skills_required: selectedServiceSkills,
       })
       .select("id")
       .single();
@@ -544,6 +607,7 @@ export default function FreelancerDashboard() {
       setServicePrice("");
       setServiceDeliveryDays("");
       setServiceCategory("Programming & Development");
+      setSelectedServiceSkills([]);
       setServiceWorkFiles([]);
       setServiceWorkDesc("");
       setServiceWorkFilePreviews([]);
@@ -1002,6 +1066,13 @@ export default function FreelancerDashboard() {
                       <p style={{ fontSize: "13px", color: "var(--text-primary)", marginTop: "12px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.5" }}>
                         {service.description}
                       </p>
+                      {service.skills_required && service.skills_required.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "12px" }}>
+                          {service.skills_required.map((s: string, sIdx: number) => (
+                            <span key={sIdx} className="tag" style={{ fontSize: "11px", padding: "3px 8px", backgroundColor: "#f1f5f9", color: "#475569", borderRadius: "var(--radius-sm)" }}>{s}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
                       <Link href={`/services/${service.id}`} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "12px" }}>
@@ -1066,13 +1137,44 @@ export default function FreelancerDashboard() {
                           id="serviceCategory"
                           name="serviceCategory"
                           value={serviceCategory}
-                          onChange={(e) => setServiceCategory(e.target.value)}
+                          onChange={(e) => {
+                            setServiceCategory(e.target.value);
+                            setSelectedServiceSkills([]);
+                          }}
                           style={{ width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
                         >
                           {categories.map((cat, idx) => (
                             <option key={idx} value={cat}>{cat}</option>
                           ))}
                         </select>
+                      </div>
+
+                      {/* Skills Checkboxes */}
+                      <div className="form-group">
+                        <label className="form-label">Skills (Choose relevant tags for your service category)</label>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", maxHeight: "180px", overflowY: "auto", padding: "8px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#ffffff" }}>
+                          {skillsCategories[serviceCategory]?.map((skill, idx) => (
+                            <label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedServiceSkills.includes(skill)}
+                                onChange={() => handleServiceSkillToggle(skill)}
+                                style={{ cursor: "pointer" }}
+                              />
+                              {skill}
+                            </label>
+                          ))}
+                        </div>
+                        {selectedServiceSkills.length > 0 && (
+                          <div style={{ marginTop: "12px" }}>
+                            <p style={{ fontSize: "12px", fontWeight: "600" }}>Selected skills ({selectedServiceSkills.length}):</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+                              {selectedServiceSkills.map((s, idx) => (
+                                <span key={idx} className="tag">{s}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>

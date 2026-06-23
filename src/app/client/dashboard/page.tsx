@@ -67,6 +67,7 @@ export default function ClientDashboard() {
   // Service Discovery Filters
   const [selectedServiceCategory, setSelectedServiceCategory] = useState("All");
   const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [selectedFilterSkills, setSelectedFilterSkills] = useState<string[]>([]);
 
   // Messaging state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -935,11 +936,14 @@ export default function ClientDashboard() {
           {/* TAB: FIND SERVICES */}
           {activeTab === "find-services" && (
             <div>
-              {/* FILTERS */}
+               {/* FILTERS */}
               <div style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
                 <select 
                   value={selectedServiceCategory} 
-                  onChange={(e) => setSelectedServiceCategory(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedServiceCategory(e.target.value);
+                    setSelectedFilterSkills([]);
+                  }}
                   style={{ padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
                 >
                   <option value="All">All Categories</option>
@@ -968,6 +972,43 @@ export default function ClientDashboard() {
                 />
               </div>
 
+              {selectedServiceCategory !== "All" && (
+                <div style={{ marginBottom: "24px", padding: "16px", border: "1px solid var(--border-color)", borderRadius: "var(--radius-sm)", backgroundColor: "#f8fafc" }}>
+                  <label className="form-label" style={{ fontWeight: "600", marginBottom: "8px", display: "block" }}>Filter by Skills in {selectedServiceCategory}:</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px", maxHeight: "150px", overflowY: "auto", padding: "8px", backgroundColor: "#fff", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-color)" }}>
+                    {skillsCategories[selectedServiceCategory]?.map((skill, idx) => (
+                      <label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedFilterSkills.includes(skill)}
+                          onChange={() => {
+                            setSelectedFilterSkills((prev) =>
+                              prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
+                            );
+                          }}
+                          style={{ cursor: "pointer" }}
+                        />
+                        {skill}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedFilterSkills.length > 0 && (
+                    <div style={{ marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                        Selected filter skills: {selectedFilterSkills.length}
+                      </span>
+                      <button 
+                        onClick={() => setSelectedFilterSkills([])}
+                        className="btn btn-outline" 
+                        style={{ padding: "4px 8px", fontSize: "11px", height: "auto" }}
+                      >
+                        Clear Skills Filter
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* SERVICES LISTINGS */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
                 {services
@@ -976,35 +1017,92 @@ export default function ClientDashboard() {
                     const matchQuery =
                       service.title.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
                       service.description.toLowerCase().includes(serviceSearchQuery.toLowerCase());
-                    return matchCat && matchQuery;
+                    
+                    let matchSkills = true;
+                    if (selectedFilterSkills.length > 0) {
+                      const serviceSkills = service.skills_required || [];
+                      matchSkills = serviceSkills.some((s: string) => selectedFilterSkills.includes(s));
+                    }
+                    return matchCat && matchQuery && matchSkills;
                   })
-                  .map((service, idx) => (
-                    <div key={idx} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", margin: 0 }}>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                          <span className="tag" style={{ marginBottom: "8px" }}>{service.category}</span>
-                          <span style={{ fontSize: "16px", fontWeight: "800", color: "var(--primary-color)" }}>
-                            ${Number(service.price).toFixed(2)}
-                          </span>
+                  .map((service, idx) => {
+                    const matchPct = (() => {
+                      if (selectedFilterSkills.length === 0) return null;
+                      const serviceSkills = service.skills_required || [];
+                      const intersection = serviceSkills.filter((s: string) => selectedFilterSkills.includes(s));
+                      return Math.round((intersection.length / selectedFilterSkills.length) * 100);
+                    })();
+
+                    return (
+                      <div key={idx} className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%", margin: 0 }}>
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              <span className="tag" style={{ marginBottom: "8px" }}>{service.category}</span>
+                              {matchPct !== null && (
+                                <span 
+                                  className="badge" 
+                                  style={{ 
+                                    marginBottom: "8px", 
+                                    backgroundColor: "#d1fae5", 
+                                    color: "#065f46", 
+                                    border: "1px solid #a7f3d0",
+                                    fontSize: "11px",
+                                    fontWeight: "600",
+                                    padding: "2px 8px",
+                                    borderRadius: "var(--radius-sm)"
+                                  }}
+                                >
+                                  {matchPct}% Match
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: "16px", fontWeight: "800", color: "var(--primary-color)" }}>
+                              ${Number(service.price).toFixed(2)}
+                            </span>
+                          </div>
+                          <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>{service.title}</h3>
+                          <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                            By: <Link href={`/profile/${service.freelancer_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{service.freelancer?.first_name} {service.freelancer?.last_name}</Link> (@{service.freelancer?.screen_name})
+                          </p>
+                          <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                            Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
+                          </p>
+                          <p style={{ fontSize: "13px", color: "#555", marginTop: "12px", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.6" }}>
+                            {service.description}
+                          </p>
+                          {service.skills_required && service.skills_required.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "12px" }}>
+                              {service.skills_required.map((s: string, sIdx: number) => {
+                                const isMatched = selectedFilterSkills.includes(s);
+                                return (
+                                  <span 
+                                    key={sIdx} 
+                                    className="tag" 
+                                    style={{ 
+                                      fontSize: "11px", 
+                                      padding: "3px 8px", 
+                                      backgroundColor: isMatched ? "#d1fae5" : "#f1f5f9", 
+                                      color: isMatched ? "#065f46" : "#475569", 
+                                      border: isMatched ? "1px solid #a7f3d0" : "none",
+                                      borderRadius: "var(--radius-sm)" 
+                                    }}
+                                  >
+                                    {s}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                        <h3 style={{ fontSize: "18px", fontWeight: "700", marginTop: "4px" }}>{service.title}</h3>
-                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                          By: <Link href={`/profile/${service.freelancer_id}`} style={{ color: "var(--primary-color)", fontWeight: "600", textDecoration: "underline" }}>{service.freelancer?.first_name} {service.freelancer?.last_name}</Link> (@{service.freelancer?.screen_name})
-                        </p>
-                        <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                          Delivery Time: {service.delivery_days} day{service.delivery_days > 1 ? "s" : ""}
-                        </p>
-                        <p style={{ fontSize: "13px", color: "#555", marginTop: "12px", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis", lineHeight: "1.6" }}>
-                          {service.description}
-                        </p>
+                        <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+                          <Link href={`/services/${service.id}`} className="btn btn-primary" style={{ padding: "6px 16px", fontSize: "13px" }}>
+                            View Details & Hire
+                          </Link>
+                        </div>
                       </div>
-                      <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
-                        <Link href={`/services/${service.id}`} className="btn btn-primary" style={{ padding: "6px 16px", fontSize: "13px" }}>
-                          View Details & Hire
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
 
               {services.filter((service) => {
@@ -1012,7 +1110,13 @@ export default function ClientDashboard() {
                 const matchQuery =
                   service.title.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
                   service.description.toLowerCase().includes(serviceSearchQuery.toLowerCase());
-                return matchCat && matchQuery;
+                
+                let matchSkills = true;
+                if (selectedFilterSkills.length > 0) {
+                  const serviceSkills = service.skills_required || [];
+                  matchSkills = serviceSkills.some((s: string) => selectedFilterSkills.includes(s));
+                }
+                return matchCat && matchQuery && matchSkills;
               }).length === 0 && (
                 <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "16px" }}>No matching freelancer services found.</p>
               )}

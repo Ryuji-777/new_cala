@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.services (
     price NUMERIC(10, 2) NOT NULL CHECK (price > 0),
     delivery_days INTEGER NOT NULL CHECK (delivery_days > 0),
     category TEXT NOT NULL,
+    skills_required TEXT[] DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 
@@ -431,3 +432,5 @@ CREATE POLICY "Allow public insert on service_works" ON public.service_works FOR
 DROP POLICY IF EXISTS "Allow public delete on service_works" ON public.service_works;
 CREATE POLICY "Allow public delete on service_works" ON public.service_works FOR DELETE USING (true);
 
+-- Migration to add skills_required column to public.services on existing database
+ALTER TABLE IF EXISTS public.services ADD COLUMN IF NOT EXISTS skills_required TEXT[] DEFAULT '{}';

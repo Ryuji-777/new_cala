@@ -448,9 +448,20 @@ export default function ServiceDetailPage({ params }: PageProps) {
 
                 <div style={{ marginBottom: "32px" }}>
                   <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "10px" }}>Service Offering Details</h4>
-                  <p style={{ fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.6", whiteSpace: "pre-line" }}>
+                  <p style={{ fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.6", whiteSpace: "pre-line", marginBottom: "20px" }}>
                     {service.description}
                   </p>
+
+                  {service.skills_required && service.skills_required.length > 0 && (
+                    <div>
+                      <h4 style={{ fontSize: "13px", fontWeight: "700", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Skills Covered</h4>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {service.skills_required.map((s: string, idx: number) => (
+                          <span key={idx} className="tag" style={{ fontSize: "12px", backgroundColor: "var(--primary-light)", color: "var(--primary-color)" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Service Work Gallery */}
