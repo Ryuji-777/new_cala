@@ -250,10 +250,15 @@ export default function LoginPage() {
       <main style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "48px 24px", flex: 1 }}>
         <div className="card" style={{ width: "100%", maxWidth: "420px", padding: "32px", borderRadius: "var(--radius-md)", boxShadow: "var(--shadow-md)" }}>
           
-          <h2 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "8px", textAlign: "center" }}>Log in to Cala</h2>
-          <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "24px", textAlign: "center" }}>
-            Welcome back! Please enter your details.
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px" }}>
+            <div className="logo" style={{ fontSize: "32px", marginBottom: "8px" }}>
+              <div className="logo-icon" style={{ width: "40px", height: "40px", fontSize: "22px" }}>C</div>
+              Cala
+            </div>
+            <p style={{ fontSize: "14px", color: "var(--text-secondary)", margin: 0, textAlign: "center" }}>
+              Welcome back! Please enter your details.
+            </p>
+          </div>
 
           {submitError && (
             <div style={{ 
