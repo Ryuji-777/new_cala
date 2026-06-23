@@ -187,6 +187,9 @@ export default function SignupPage() {
       if (error) {
         setSubmitError(error.message);
       } else {
+        // Sign out immediately to clear any auto-login session established by the signup response
+        await supabase.auth.signOut();
+
         setSubmitSuccess(true);
         // Reset form
         setFormData({
