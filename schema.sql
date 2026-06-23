@@ -246,6 +246,9 @@ DROP POLICY IF EXISTS "Allow public read on profiles" ON public.profiles;
 CREATE POLICY "Allow public read on profiles" ON public.profiles FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow users to update own profile" ON public.profiles;
 CREATE POLICY "Allow users to update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "Allow users to insert own profile" ON public.profiles;
+CREATE POLICY "Allow users to insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
 
 -- 2. Freelancer Skills Policies
 DROP POLICY IF EXISTS "Allow public read on freelancer_skills" ON public.freelancer_skills;
