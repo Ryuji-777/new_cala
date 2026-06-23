@@ -491,6 +491,32 @@ export default function ClientDashboard() {
     }
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    setConfirmState({
+      message: "Are you sure you want to permanently delete this job posting? This cannot be undone.",
+      onConfirm: async () => {
+        setConfirmState(null);
+        const { error } = await supabase
+          .from("jobs")
+          .delete()
+          .eq("id", jobId);
+
+        if (error) {
+          setPopup({
+            message: "Failed to delete job posting: " + error.message,
+            type: "error"
+          });
+        } else {
+          setPopup({
+            message: "Job posting deleted successfully.",
+            type: "success"
+          });
+          loadClientData();
+        }
+      }
+    });
+  };
+
   // HIRE FREELANCER (deducts funds, starts contract, updates job status)
   const handleHireFreelancer = async (application: any) => {
     if (!profile) return;
@@ -1273,6 +1299,24 @@ export default function ClientDashboard() {
                           </span>
                         </p>
                       </div>
+
+                      {(job.status === "open" || job.status === "cancelled") && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="btn btn-outline"
+                          style={{
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            color: "var(--error-color)",
+                            borderColor: "var(--error-border)",
+                            backgroundColor: "transparent",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Delete Job
+                        </button>
+                      )}
                     </div>
 
                     {/* Applications candidates section */}

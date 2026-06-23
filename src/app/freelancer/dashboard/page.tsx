@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Popup from "@/components/Popup";
 import Header from "@/components/Header";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 // Predefined categories and skills from the user spec
 const skillsCategories: Record<string, string[]> = {
@@ -83,6 +84,7 @@ export default function FreelancerDashboard() {
   
   // Popup modal state
   const [popup, setPopup] = useState<{ message: string; type: "success" | "error" | "info"; onClose?: () => void } | null>(null);
+  const [confirmState, setConfirmState] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
 
@@ -618,6 +620,32 @@ export default function FreelancerDashboard() {
     }
   };
 
+  const handleDeleteService = async (serviceId: string) => {
+    setConfirmState({
+      message: "Are you sure you want to permanently delete this service offering? This cannot be undone.",
+      onConfirm: async () => {
+        setConfirmState(null);
+        const { error } = await supabase
+          .from("services")
+          .delete()
+          .eq("id", serviceId);
+
+        if (error) {
+          setPopup({
+            message: "Failed to delete service offering: " + error.message,
+            type: "error"
+          });
+        } else {
+          setPopup({
+            message: "Service offering deleted successfully.",
+            type: "success"
+          });
+          loadFreelancerData();
+        }
+      }
+    });
+  };
+
   // Open Chat Conversation
   const handleOpenChat = async (partner: any) => {
     if (!profile) return;
@@ -1074,7 +1102,22 @@ export default function FreelancerDashboard() {
                         </div>
                       )}
                     </div>
-                    <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+                    <div style={{ borderTop: "1px solid var(--border-color)", marginTop: "16px", paddingTop: "12px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteService(service.id)}
+                        className="btn btn-outline"
+                        style={{
+                          padding: "6px 12px",
+                          fontSize: "12px",
+                          color: "var(--error-color)",
+                          borderColor: "var(--error-border)",
+                          backgroundColor: "transparent",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Delete Offer
+                      </button>
                       <Link href={`/services/${service.id}`} className="btn btn-outline" style={{ padding: "6px 12px", fontSize: "12px" }}>
                         View Details
                       </Link>
@@ -1737,6 +1780,14 @@ export default function FreelancerDashboard() {
             popup.onClose?.();
             setPopup(null);
           }}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmPopup
+          message={confirmState.message}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(null)}
         />
       )}
     </>
